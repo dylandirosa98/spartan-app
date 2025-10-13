@@ -226,9 +226,9 @@ export default function AdminManagementPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
               <Building2 className="h-8 w-8 text-[#C41E3A]" />
-              Admin Management Panel
+              Arisys Admin Panel
             </h1>
-            <p className="text-gray-600 mt-1">Manage multiple roofing companies</p>
+            <p className="text-gray-600 mt-1">Multi-Company Management System</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleLogout}>

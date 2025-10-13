@@ -175,14 +175,16 @@ export default function SetupPage() {
       <Card className="w-full max-w-lg shadow-xl">
         <CardHeader className="space-y-1 text-center pb-8">
           <div className="flex justify-center mb-6">
-            <img
-              src="/spartan-logo.svg"
-              alt="Spartan Exteriors"
-              className="h-20 w-auto"
-            />
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-4 rounded-lg">
+              <img
+                src="/arisys-logo.png"
+                alt="Arisys"
+                className="h-16 w-auto"
+              />
+            </div>
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
-            Welcome to Spartan CRM
+            Welcome to Arisys
           </CardTitle>
           <CardDescription className="text-base">
             Configure your Twenty CRM connection to get started

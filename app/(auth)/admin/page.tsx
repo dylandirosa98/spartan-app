@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Shield } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,12 +94,16 @@ export default function AdminLoginPage() {
       <Card className="w-full max-w-md shadow-2xl border-slate-700">
         <CardHeader className="space-y-1 text-center pb-8">
           <div className="flex justify-center mb-6">
-            <div className="p-4 bg-[#C41E3A] rounded-full">
-              <Shield className="h-12 w-12 text-white" />
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-4 rounded-lg">
+              <img
+                src="/arisys-logo.png"
+                alt="Arisys Admin"
+                className="h-12 w-auto"
+              />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
-            Admin Management Panel
+            Arisys Admin Panel
           </CardTitle>
           <CardDescription className="text-base">
             Secure login for system administrators

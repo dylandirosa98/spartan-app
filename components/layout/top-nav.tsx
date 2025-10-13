@@ -15,11 +15,13 @@ export function TopNav() {
       <div className="flex h-full items-center justify-between px-4">
         {/* Logo/Title */}
         <div className="flex items-center gap-3">
-          <img
-            src="/spartan-logo.svg"
-            alt="Spartan Exteriors"
-            className="h-10 w-auto"
-          />
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 px-3 py-2 rounded-md">
+            <img
+              src="/arisys-logo.png"
+              alt="Arisys"
+              className="h-8 w-auto"
+            />
+          </div>
         </div>
 
         {/* Status Indicators */}

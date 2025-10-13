@@ -1,7 +1,7 @@
 {
-  "name": "spartan-crm",
+  "name": "arisys",
   "version": "1.0.0",
-  "description": "Enterprise-grade PWA for Spartan Exteriors - Roofing CRM",
+  "description": "Arisys - Multi-company roofing CRM platform",
   "private": true,
   "scripts": {
     "dev": "next dev",
