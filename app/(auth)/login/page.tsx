@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -44,13 +43,11 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { login } = useAuthStore();
-  const [showDemoCredentials, setShowDemoCredentials] = useState(false);
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    setValue,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -80,9 +77,13 @@ export default function LoginPage() {
         description: `Welcome back, ${user.name}!`,
       });
 
-      // Redirect to leads page
+      // Redirect based on user role
       setTimeout(() => {
-        router.push('/leads');
+        if (user.role === 'master_admin') {
+          router.push('/admin/management');
+        } else {
+          router.push('/leads');
+        }
       }, 500);
     } catch (error) {
       console.error('Login error:', error);
@@ -94,30 +95,24 @@ export default function LoginPage() {
     }
   };
 
-  /**
-   * Quick login function for demo purposes
-   */
-  const quickLogin = (email: string) => {
-    setValue('email', email);
-    setValue('password', 'password');
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
       <Card className="w-full max-w-lg shadow-xl">
         <CardHeader className="space-y-1 text-center pb-8">
           <div className="flex justify-center mb-6">
-            <img
-              src="/spartan-logo.svg"
-              alt="Spartan Exteriors"
-              className="h-20 w-auto"
-            />
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-4 rounded-lg">
+              <img
+                src="/arisys-logo.png"
+                alt="Arisys"
+                className="h-16 w-auto"
+              />
+            </div>
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
-            Welcome to Spartan CRM
+            Welcome to Arisys
           </CardTitle>
           <CardDescription className="text-base">
-            Sign in to your account to continue
+            Roofing CRM Platform - Sign in to continue
           </CardDescription>
         </CardHeader>
 
@@ -130,7 +125,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@spartanexteriors.com"
+                  placeholder="your@email.com"
                   {...register('email')}
                   className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
                 />
@@ -157,69 +152,11 @@ export default function LoginPage() {
               )}
             </div>
 
-            {/* Demo Credentials Section */}
-            <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-4 border border-blue-200 dark:border-blue-800">
-              <button
-                type="button"
-                onClick={() => setShowDemoCredentials(!showDemoCredentials)}
-                className="w-full flex items-center justify-between text-sm font-medium text-blue-900 dark:text-blue-100"
-              >
-                <span>Demo Credentials</span>
-                <span className="text-xs">{showDemoCredentials ? '▼' : '▶'}</span>
-              </button>
-
-              {showDemoCredentials && (
-                <div className="mt-3 space-y-2 text-xs text-blue-800 dark:text-blue-200">
-                  <div className="flex items-center justify-between p-2 bg-white dark:bg-blue-900 rounded">
-                    <div>
-                      <p className="font-semibold">Owner Account</p>
-                      <p className="text-blue-600 dark:text-blue-300">owner@spartanexteriors.com</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => quickLogin('owner@spartanexteriors.com')}
-                      className="text-xs"
-                    >
-                      Use
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-white dark:bg-blue-900 rounded">
-                    <div>
-                      <p className="font-semibold">Manager Account</p>
-                      <p className="text-blue-600 dark:text-blue-300">manager@spartanexteriors.com</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => quickLogin('manager@spartanexteriors.com')}
-                      className="text-xs"
-                    >
-                      Use
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-white dark:bg-blue-900 rounded">
-                    <div>
-                      <p className="font-semibold">Salesperson Account</p>
-                      <p className="text-blue-600 dark:text-blue-300">sales@spartanexteriors.com</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => quickLogin('sales@spartanexteriors.com')}
-                      className="text-xs"
-                    >
-                      Use
-                    </Button>
-                  </div>
-                  <p className="text-center text-blue-700 dark:text-blue-300 mt-2">
-                    Password for all accounts: <span className="font-mono font-semibold">password</span>
-                  </p>
-                </div>
-              )}
+            {/* Quick Access Section */}
+            <div className="rounded-lg bg-slate-50 dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-700">
+              <p className="text-xs text-center text-slate-600 dark:text-slate-400">
+                Need help? Contact your system administrator
+              </p>
             </div>
           </CardContent>
 
@@ -243,7 +180,7 @@ export default function LoginPage() {
             </Button>
 
             <p className="text-xs text-center text-muted-foreground">
-              This is a demo application. Use the credentials above to test different user roles.
+              Secure access to your roofing CRM platform
             </p>
           </CardFooter>
         </form>

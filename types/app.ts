@@ -130,7 +130,7 @@ export interface AppContext {
 /**
  * User roles
  */
-export type UserRole = 'owner' | 'manager' | 'salesperson';
+export type UserRole = 'master_admin' | 'owner' | 'manager' | 'salesperson';
 
 /**
  * User permissions
@@ -262,7 +262,7 @@ export const UserSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
   email: z.string().email(),
-  role: z.enum(['owner', 'manager', 'salesperson']),
+  role: z.enum(['master_admin', 'owner', 'manager', 'salesperson']),
   permissions: z.array(z.enum([
     'view_leads',
     'create_leads',

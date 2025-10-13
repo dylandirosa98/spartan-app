@@ -4,6 +4,16 @@ import { User, Permission } from '@/types';
  * Role-based permissions mapping
  */
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
+  master_admin: [
+    'view_leads',
+    'create_leads',
+    'edit_leads',
+    'delete_leads',
+    'view_analytics',
+    'manage_users',
+    'view_settings',
+    'edit_settings',
+  ],
   owner: [
     'view_leads',
     'create_leads',
@@ -31,35 +41,25 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
 };
 
 /**
- * Demo users for authentication testing
+ * Production users for authentication
  */
 export const DEMO_USERS: User[] = [
   {
+    id: '550e8400-e29b-41d4-a716-446655440000',
+    name: 'Master Admin',
+    email: 'dylandirosa980@gmail.com',
+    role: 'master_admin',
+    permissions: ROLE_PERMISSIONS.master_admin,
+    avatar: undefined,
+    createdAt: new Date().toISOString(),
+    lastLoginAt: undefined,
+  },
+  {
     id: '550e8400-e29b-41d4-a716-446655440001',
-    name: 'John Smith',
-    email: 'owner@spartanexteriors.com',
+    name: 'Dylan DiRosa',
+    email: 'dylan@thespartanexteriors.com',
     role: 'owner',
     permissions: ROLE_PERMISSIONS.owner,
-    avatar: undefined,
-    createdAt: new Date().toISOString(),
-    lastLoginAt: undefined,
-  },
-  {
-    id: '550e8400-e29b-41d4-a716-446655440002',
-    name: 'Sarah Johnson',
-    email: 'manager@spartanexteriors.com',
-    role: 'manager',
-    permissions: ROLE_PERMISSIONS.manager,
-    avatar: undefined,
-    createdAt: new Date().toISOString(),
-    lastLoginAt: undefined,
-  },
-  {
-    id: '550e8400-e29b-41d4-a716-446655440003',
-    name: 'Mike Davis',
-    email: 'sales@spartanexteriors.com',
-    role: 'salesperson',
-    permissions: ROLE_PERMISSIONS.salesperson,
     avatar: undefined,
     createdAt: new Date().toISOString(),
     lastLoginAt: undefined,
@@ -74,14 +74,14 @@ export function getPermissionsForRole(role: string): Permission[] {
 }
 
 /**
- * Mock authentication function
+ * Authentication function
  */
 export function authenticateUser(
   email: string,
   password: string
 ): User | null {
-  // For demo purposes, accept "password" for any demo user
-  if (password !== 'password') {
+  // Check password
+  if (password !== 'Bubs2shiesty$') {
     return null;
   }
 
