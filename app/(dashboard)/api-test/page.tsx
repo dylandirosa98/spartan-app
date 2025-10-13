@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { twentyApi } from '@/lib/api/twenty';
 import { getApiKey } from '@/lib/api/encryption';
 
 export default function ApiTestPage() {

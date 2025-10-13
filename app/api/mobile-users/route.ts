@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/db/supabase';
-import type { MobileUser, MobileUserInsert, MobileUserUpdate } from '@/lib/db/supabase';
+import type { MobileUserInsert, MobileUserUpdate } from '@/lib/db/supabase';
 import bcrypt from 'bcryptjs';
 
 // GET - List all mobile users
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Fetch all users from Supabase
     const { data: users, error } = await supabase

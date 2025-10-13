@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Lead, LeadFilters, CreateLead, UpdateLead } from '@/types';
-import { db } from '@/lib/db';
 import { twentyApi } from '@/lib/api/twenty';
 
 interface LeadState {

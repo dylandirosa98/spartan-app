@@ -122,10 +122,10 @@ function twentyPersonToLead(person: TwentyPerson): Lead {
     name: fullName,
     phone: person.phone || '',
     email: person.email,
-    address: person.address?.street || '',
-    city: person.address?.city || '',
-    state: person.address?.state || '',
-    zipCode: person.address?.postalCode || '',
+    address: person.address?.addressStreet1 || '',
+    city: person.address?.addressCity || '',
+    state: person.address?.addressState || '',
+    zipCode: person.address?.addressPostcode || '',
     source: 'website', // Default source, should be mapped from Twenty CRM
     medium: 'organic', // Default medium, should be mapped from Twenty CRM
     status: 'new', // Default status, should be mapped from Twenty CRM
