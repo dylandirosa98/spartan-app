@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { useAuthStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -31,6 +32,7 @@ import type { Company, CreateCompany } from '@/types';
 export default function AdminManagementPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user, logout } = useAuthStore();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -51,13 +53,12 @@ export default function AdminManagementPage() {
     isActive: true,
   });
 
-  // Check authentication
+  // Check authentication - only master_admin can access
   useEffect(() => {
-    const isAuthenticated = sessionStorage.getItem('admin_authenticated');
-    if (!isAuthenticated) {
-      router.push('/admin');
+    if (!user || user.role !== 'master_admin') {
+      router.push('/login');
     }
-  }, [router]);
+  }, [user, router]);
 
   // Fetch companies
   useEffect(() => {
@@ -214,9 +215,8 @@ export default function AdminManagementPage() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('admin_authenticated');
-    sessionStorage.removeItem('admin_login_time');
-    router.push('/admin');
+    logout();
+    router.push('/login');
   };
 
   return (
