@@ -1,0 +1,17 @@
+<svg width="400" height="120" viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Spartan shield/spear icon -->
+  <g transform="translate(20, 10)">
+    <!-- Shield outline -->
+    <path d="M 40 10 L 60 10 L 70 60 L 50 80 L 30 60 Z" fill="none" stroke="#9CA3AF" stroke-width="3"/>
+    <path d="M 40 10 L 60 10 L 70 60 L 50 80 L 30 60 Z" fill="none" stroke="#9CA3AF" stroke-width="2" transform="translate(-5, 0)"/>
+    <path d="M 40 10 L 60 10 L 70 60 L 50 80 L 30 60 Z" fill="none" stroke="#9CA3AF" stroke-width="2" transform="translate(5, 0)"/>
+    <!-- Spear -->
+    <path d="M 50 5 L 55 20 L 50 90 L 45 20 Z" fill="#C41E3A"/>
+  </g>
+
+  <!-- SPARTAN text -->
+  <text x="110" y="65" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#C41E3A">SPARTAN</text>
+
+  <!-- EXTERIORS text -->
+  <text x="110" y="95" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#000000">EXTERIORS</text>
+</svg>

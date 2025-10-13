@@ -1,0 +1,17 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#C41E3A" rx="80"/>
+
+  <!-- Shield and Spear Icon -->
+  <g transform="translate(156, 80)">
+    <!-- Shield outline (light gray) -->
+    <path d="M 80 20 L 120 20 L 140 120 L 100 160 L 60 120 Z" fill="none" stroke="#E5E7EB" stroke-width="8"/>
+    <path d="M 80 20 L 120 20 L 140 120 L 100 160 L 60 120 Z" fill="none" stroke="#E5E7EB" stroke-width="6" transform="translate(-10, 0)"/>
+    <path d="M 80 20 L 120 20 L 140 120 L 100 160 L 60 120 Z" fill="none" stroke="#E5E7EB" stroke-width="6" transform="translate(10, 0)"/>
+    <!-- Spear -->
+    <path d="M 100 10 L 110 40 L 100 180 L 90 40 Z" fill="#FFFFFF"/>
+  </g>
+
+  <!-- S letter -->
+  <text x="256" y="400" font-family="Arial, sans-serif" font-size="180" font-weight="bold" fill="#FFFFFF" text-anchor="middle">S</text>
+</svg>
