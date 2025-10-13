@@ -96,22 +96,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
-      <Card className="w-full max-w-lg shadow-xl">
-        <CardHeader className="space-y-1 text-center pb-8">
-          <div className="flex justify-center mb-6">
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-4 rounded-lg">
-              <img
-                src="/arisys-logo.png"
-                alt="Arisys"
-                className="h-16 w-auto"
-              />
-            </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+      <Card className="w-full max-w-lg shadow-2xl border-slate-700">
+        <CardHeader className="space-y-1 text-center pb-8 bg-gradient-to-br from-slate-900 to-slate-800 rounded-t-lg">
+          <div className="flex justify-center mb-6 pt-4">
+            <img
+              src="/arisys-logo.png"
+              alt="Arisys"
+              className="h-24 w-auto"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-900">
+          <CardTitle className="text-2xl font-bold text-white">
             Welcome to Arisys
           </CardTitle>
-          <CardDescription className="text-base">
+          <CardDescription className="text-base text-slate-300">
             Roofing CRM Platform - Sign in to continue
           </CardDescription>
         </CardHeader>
