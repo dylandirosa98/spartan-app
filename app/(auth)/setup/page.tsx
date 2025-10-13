@@ -132,6 +132,8 @@ export default function SetupPage() {
    */
   const onSubmit = async (data: SetupFormData) => {
     try {
+      console.log('Saving configuration...', { apiUrl: data.apiUrl, hasKey: !!data.apiKey });
+
       // Create configuration object
       const config: TwentyCRMConfig = {
         apiUrl: data.apiUrl,
@@ -141,6 +143,13 @@ export default function SetupPage() {
       // Save configuration to store (which handles encryption)
       setConfig(config);
 
+      // Wait a bit to ensure localStorage is written
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Verify it was saved
+      const savedKey = localStorage.getItem('twenty_api_key');
+      console.log('API key saved to localStorage:', !!savedKey);
+
       toast({
         title: 'Configuration Saved',
         description: 'Your Twenty CRM connection has been configured successfully',
@@ -148,8 +157,9 @@ export default function SetupPage() {
 
       // Redirect to leads page
       setTimeout(() => {
+        console.log('Redirecting to /leads');
         router.push('/leads');
-      }, 500);
+      }, 800);
     } catch (error) {
       console.error('Failed to save configuration:', error);
       toast({

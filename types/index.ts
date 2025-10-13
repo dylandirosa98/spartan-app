@@ -85,3 +85,16 @@ export {
   isValidUserPreferences,
   isValidAPIConfig,
 } from './app';
+
+// Company types
+export type {
+  Company,
+  CreateCompany,
+  UpdateCompany,
+} from './company';
+
+export {
+  CompanySchema,
+  CreateCompanySchema,
+  UpdateCompanySchema,
+} from './company';
