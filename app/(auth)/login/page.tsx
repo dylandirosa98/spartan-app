@@ -80,7 +80,7 @@ export default function LoginPage() {
       // Redirect based on user role
       setTimeout(() => {
         if (user.role === 'master_admin') {
-          router.push('/admin/management');
+          router.push('/admin/dashboard');
         } else {
           router.push('/leads');
         }

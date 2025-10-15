@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { AdminLayout } from '@/components/layout/admin-layout';
 import { useAuthStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,7 +32,7 @@ import type { Company, CreateCompany } from '@/types';
 export default function AdminManagementPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { currentUser, logout } = useAuthStore();
+  const { currentUser } = useAuthStore();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -214,26 +214,18 @@ export default function AdminManagementPage() {
     }));
   };
 
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
-  };
-
   return (
-    <DashboardLayout>
+    <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
               <Building2 className="h-8 w-8 text-[#C41E3A]" />
-              Arisys Admin Panel
+              Company Management
             </h1>
-            <p className="text-gray-600 mt-1">Multi-Company Management System</p>
+            <p className="text-gray-600 mt-1">Manage all roofing companies and their API configurations</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleLogout}>
-              Logout
-            </Button>
             <Dialog open={isDialogOpen} onOpenChange={(open) => {
               setIsDialogOpen(open);
               if (!open) resetForm();
@@ -482,6 +474,6 @@ export default function AdminManagementPage() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
+    </AdminLayout>
   );
 }

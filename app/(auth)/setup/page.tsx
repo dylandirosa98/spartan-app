@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, ShieldAlert } from 'lucide-react';
 import axios from 'axios';
 
 import { Button } from '@/components/ui/button';
@@ -41,15 +41,35 @@ type SetupFormData = z.infer<typeof setupSchema>;
 /**
  * Setup Page Component
  * Handles initial authentication and API configuration for Twenty CRM
+ * ADMIN ONLY - Regular users should not access this page
  */
 export default function SetupPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { setConfig } = useAuthStore();
+  const { setConfig, currentUser } = useAuthStore();
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(
     null
   );
+
+  // Check if user is master_admin - only they can access this page
+  useEffect(() => {
+    if (!currentUser) {
+      // No user logged in, redirect to login
+      router.push('/login');
+      return;
+    }
+
+    if (currentUser.role !== 'master_admin') {
+      // Non-admin user trying to access setup page
+      toast({
+        title: 'Access Denied',
+        description: 'Only system administrators can access this page. API configuration is managed by your admin.',
+        variant: 'destructive',
+      });
+      router.push('/leads');
+    }
+  }, [currentUser, router, toast]);
 
   const {
     register,
@@ -155,10 +175,10 @@ export default function SetupPage() {
         description: 'Your Twenty CRM connection has been configured successfully',
       });
 
-      // Redirect to leads page
+      // Redirect to admin dashboard
       setTimeout(() => {
-        console.log('Redirecting to /leads');
-        router.push('/leads');
+        console.log('Redirecting to /admin/dashboard');
+        router.push('/admin/dashboard');
       }, 800);
     } catch (error) {
       console.error('Failed to save configuration:', error);
@@ -189,6 +209,10 @@ export default function SetupPage() {
           <CardDescription className="text-base">
             Configure your Twenty CRM connection to get started
           </CardDescription>
+          <div className="mt-4 flex items-center gap-2 justify-center text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400 p-2 rounded-lg">
+            <ShieldAlert className="h-4 w-4" />
+            <span className="text-xs font-medium">Admin Only - API Configuration</span>
+          </div>
         </CardHeader>
 
         <form onSubmit={handleSubmit(onSubmit)}>
