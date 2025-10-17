@@ -15,6 +15,7 @@ import {
   User,
   Shield,
   Smartphone,
+  Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store';
@@ -136,7 +137,7 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      {/* User Info & Logout */}
+      {/* User Info & Actions */}
       {currentUser && (
         <div className="border-t p-3 space-y-3 bg-gray-50">
           <div className="flex items-start gap-3 px-3 py-2 bg-white rounded-lg border border-gray-200">
@@ -158,6 +159,17 @@ export function AdminSidebar() {
               </Badge>
             </div>
           </div>
+
+          {/* Preview Company View */}
+          <Button
+            variant="outline"
+            className="w-full text-sm hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300"
+            onClick={() => router.push('/leads')}
+          >
+            <Eye className="mr-2 h-4 w-4" />
+            View as Company
+          </Button>
+
           <Button
             variant="outline"
             className="w-full text-sm hover:bg-[#C41E3A]/10 hover:text-[#C41E3A] hover:border-[#C41E3A]/30"

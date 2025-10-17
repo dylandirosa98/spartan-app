@@ -1,14 +1,19 @@
 'use client';
 
 import { useAppStore } from '@/store/useAppStore';
-import { Loader2, Wifi, WifiOff } from 'lucide-react';
+import { useAuthStore } from '@/store';
+import { useRouter } from 'next/navigation';
+import { Loader2, Wifi, WifiOff, Shield } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export function TopNav() {
+  const router = useRouter();
   const { isOnline, isSyncing } = useAppStore((state) => ({
     isOnline: state.isOnline,
     isSyncing: state.isSyncing,
   }));
+  const { currentUser } = useAuthStore();
 
   return (
     <header className="sticky top-0 z-40 h-16 w-full border-b bg-white">
@@ -26,6 +31,18 @@ export function TopNav() {
 
         {/* Status Indicators */}
         <div className="flex items-center gap-3">
+          {/* Back to Admin (if master_admin) */}
+          {currentUser?.role === 'master_admin' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="hover:bg-[#C41E3A]/10 hover:text-[#C41E3A] hover:border-[#C41E3A]/30"
+              onClick={() => router.push('/admin/dashboard')}
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Back to Admin</span>
+            </Button>
+          )}
           {/* Sync Status */}
           {isSyncing && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
