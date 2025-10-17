@@ -12,6 +12,24 @@ export async function GET(_request: NextRequest) {
       .order('name', { ascending: true });
 
     if (error) {
+      console.error('Supabase error fetching companies:', error);
+
+      // Check if it's a table not found error
+      if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        return NextResponse.json(
+          {
+            error: 'Database tables not found. Please run migrations in Supabase dashboard.',
+            details: 'Run the SQL files in supabase/migrations/ folder',
+            migrationFiles: [
+              '001_create_companies_table.sql',
+              '002_create_users_table.sql',
+              '003_seed_spartan_exteriors.sql'
+            ]
+          },
+          { status: 500 }
+        );
+      }
+
       throw error;
     }
 
@@ -32,10 +50,13 @@ export async function GET(_request: NextRequest) {
     }));
 
     return NextResponse.json({ companies: decryptedCompanies });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching companies:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch companies' },
+      {
+        error: 'Failed to fetch companies',
+        details: error?.message || 'Unknown error',
+      },
       { status: 500 }
     );
   }
