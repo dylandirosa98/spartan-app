@@ -130,6 +130,23 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'spartan-auth-storage',
+      storage: {
+        getItem: (name) => {
+          // Try localStorage first, fall back to sessionStorage
+          const localValue = localStorage.getItem(name);
+          if (localValue) return localValue;
+          return sessionStorage.getItem(name);
+        },
+        setItem: (name, value) => {
+          // Store in both for redundancy
+          localStorage.setItem(name, value);
+          sessionStorage.setItem(name, value);
+        },
+        removeItem: (name) => {
+          localStorage.removeItem(name);
+          sessionStorage.removeItem(name);
+        },
+      },
       partialize: (state) => ({
         config: {
           ...state.config,
@@ -138,7 +155,7 @@ export const useAuthStore = create<AuthState>()(
             apiKey: '', // Don't persist API key in state (stored separately)
           },
         },
-        currentUser: state.currentUser, // Persist user in localStorage
+        currentUser: state.currentUser, // Persist user in storage
       }),
     }
   )
