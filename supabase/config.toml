@@ -1,0 +1,48 @@
+# Supabase configuration for Vercel integration
+# This file tells Vercel how to apply migrations automatically
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+
+[realtime]
+enabled = true
+port = 54323
+
+[studio]
+enabled = true
+port = 54324
+
+[inbucket]
+enabled = true
+port = 54325
+smtp_port = 54326
+pop3_port = 54327
+
+[storage]
+enabled = true
+port = 54328
+
+[auth]
+enabled = true
+port = 54329
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
