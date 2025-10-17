@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/db/supabase';
+import { isUsingMockData, mockDb, logMockDataWarning } from '@/lib/db/mock-data';
 
 export interface AdminUser {
   id: string;
@@ -28,6 +29,13 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('companyId');
+
+    // Use mock data if Supabase is not configured
+    if (isUsingMockData()) {
+      logMockDataWarning();
+      const users = companyId ? mockDb.getUsers(companyId) : mockDb.getUsers();
+      return NextResponse.json({ users, usingMockData: true });
+    }
 
     let query = supabase
       .from('users')
@@ -103,6 +111,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Use mock data if Supabase is not configured
+    if (isUsingMockData()) {
+      const newUser = mockDb.createUser({
+        companyId,
+        companyName: '', // Will be filled by mockDb
+        name,
+        email,
+        role,
+        isActive,
+      });
+      return NextResponse.json(
+        {
+          message: 'User created successfully (mock data)',
+          user: newUser,
+          usingMockData: true,
+        },
+        { status: 201 }
+      );
+    }
+
     // Check if email already exists
     const { data: existingUser } = await supabase
       .from('users')
@@ -175,6 +203,22 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Use mock data if Supabase is not configured
+    if (isUsingMockData()) {
+      const updatedUser = mockDb.updateUser(id, updates);
+      if (!updatedUser) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({
+        message: 'User updated successfully (mock data)',
+        user: updatedUser,
+        usingMockData: true,
+      });
+    }
+
     // Build update object
     const updateData: any = {};
     if (updates.name !== undefined) updateData.name = updates.name;
@@ -233,6 +277,21 @@ export async function DELETE(request: NextRequest) {
         { error: 'User ID is required' },
         { status: 400 }
       );
+    }
+
+    // Use mock data if Supabase is not configured
+    if (isUsingMockData()) {
+      const success = mockDb.deleteUser(id);
+      if (!success) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({
+        message: 'User deleted successfully (mock data)',
+        usingMockData: true,
+      });
     }
 
     const { error } = await supabase

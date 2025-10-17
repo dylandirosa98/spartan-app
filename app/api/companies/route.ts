@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/db/supabase';
 import type { Company, CreateCompany, UpdateCompany } from '@/types';
 import { encrypt, decrypt } from '@/lib/api/encryption';
+import { isUsingMockData, mockDb, logMockDataWarning } from '@/lib/db/mock-data';
 
 // GET - List all companies
 export async function GET(_request: NextRequest) {
   try {
+    // Use mock data if Supabase is not configured (local development)
+    if (isUsingMockData()) {
+      logMockDataWarning();
+      const companies = mockDb.getCompanies();
+      return NextResponse.json({ companies, usingMockData: true });
+    }
+
     const { data: companies, error } = await supabase
       .from('companies')
       .select('*')
@@ -87,6 +95,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
+      );
+    }
+
+    // Use mock data if Supabase is not configured
+    if (isUsingMockData()) {
+      const newCompany = mockDb.createCompany({
+        name,
+        logo,
+        contactEmail,
+        contactPhone,
+        address,
+        city,
+        state,
+        zipCode,
+        twentyApiUrl,
+        twentyApiKey,
+        supabaseUrl,
+        supabaseKey,
+        isActive,
+      });
+
+      return NextResponse.json(
+        {
+          message: 'Company created successfully (mock data)',
+          company: newCompany,
+          usingMockData: true,
+        },
+        { status: 201 }
       );
     }
 
@@ -176,6 +212,22 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Use mock data if Supabase is not configured
+    if (isUsingMockData()) {
+      const updatedCompany = mockDb.updateCompany(id, updates);
+      if (!updatedCompany) {
+        return NextResponse.json(
+          { error: 'Company not found' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({
+        message: 'Company updated successfully (mock data)',
+        company: updatedCompany,
+        usingMockData: true,
+      });
+    }
+
     // Build update object with snake_case
     const updateData: any = {};
 
@@ -254,6 +306,21 @@ export async function DELETE(request: NextRequest) {
         { error: 'Company ID is required' },
         { status: 400 }
       );
+    }
+
+    // Use mock data if Supabase is not configured
+    if (isUsingMockData()) {
+      const success = mockDb.deleteCompany(id);
+      if (!success) {
+        return NextResponse.json(
+          { error: 'Company not found' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({
+        message: 'Company deleted successfully (mock data)',
+        usingMockData: true,
+      });
     }
 
     const { error } = await supabase
