@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,27 +28,22 @@ import { useLeadStore } from '@/store/useLeadStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToast } from '@/hooks/use-toast';
 import { DEMO_USERS } from '@/lib/demo-users';
+import { NotesTimeline } from './notes-timeline';
+import { TasksTimeline } from './tasks-timeline';
+import { LeadInfoView } from './lead-info-view';
 
-// Form validation schema
+// Form validation schema - relaxed for leads from Twenty CRM
 const leadFormSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200, 'Name is too long'),
-  phone: z
-    .string()
-    .min(10, 'Phone number must be at least 10 digits')
-    .max(20, 'Phone number is too long')
-    .regex(/^[\d\s\-\(\)\+]+$/, 'Invalid phone number format'),
+  phone: z.string().optional().or(z.literal('')),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
-  address: z.string().min(1, 'Address is required').max(300, 'Address is too long'),
-  city: z.string().min(1, 'City is required').max(100, 'City name is too long'),
-  state: z.string().min(2, 'State is required').max(2, 'Use 2-letter state code'),
-  zipCode: z
-    .string()
-    .min(5, 'ZIP code must be at least 5 digits')
-    .max(10, 'ZIP code is too long')
-    .regex(/^\d{5}(-\d{4})?$/, 'Invalid ZIP code format'),
-  source: z.enum(['google_ads', 'google_lsa', 'facebook_ads', 'canvass', 'referral', 'website']),
+  address: z.string().optional().or(z.literal('')),
+  city: z.string().optional().or(z.literal('')),
+  state: z.string().max(2, 'Use 2-letter state code').optional().or(z.literal('')),
+  zipCode: z.string().optional().or(z.literal('')),
+  source: z.enum(['google_ads', 'google_lsa', 'facebook_ads', 'canvass', 'referral', 'website', 'twenty_crm']),
   medium: z.enum(['cpc', 'lsas', 'social_ads', 'canvass', 'referral', 'organic']),
-  status: z.enum(['new', 'contacted', 'qualified', 'proposal_sent', 'won', 'lost']),
+  status: z.enum(['new', 'contacted', 'qualified', 'quoted', 'proposal_sent', 'won', 'lost']),
   propertyType: z.enum(['residential', 'commercial']).optional(),
   notes: z.string().max(5000, 'Notes are too long').optional(),
   estimatedValue: z.string().optional(),
@@ -95,7 +91,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
       estimatedValue: '',
       roofType: '',
       nextFollowUp: '',
-      assignedTo: '',
+      assignedTo: 'unassigned',
     },
   });
 
@@ -110,24 +106,24 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
   useEffect(() => {
     if (lead && mode === 'edit') {
       reset({
-        name: lead.name,
-        phone: lead.phone,
+        name: lead.name || '',
+        phone: lead.phone || '',
         email: lead.email || '',
-        address: lead.address,
-        city: lead.city,
-        state: lead.state,
-        zipCode: lead.zipCode,
-        source: lead.source,
-        medium: lead.medium,
-        status: lead.status,
-        propertyType: lead.propertyType,
+        address: lead.address || '',
+        city: lead.city || '',
+        state: lead.state || '',
+        zipCode: lead.zipCode || '',
+        source: lead.source || 'twenty_crm',
+        medium: lead.medium || 'organic',
+        status: lead.status || 'new',
+        propertyType: lead.propertyType || undefined,
         notes: lead.notes || '',
         estimatedValue: lead.estimatedValue?.toString() || '',
         roofType: lead.roofType || '',
         nextFollowUp: lead.nextFollowUp
           ? new Date(lead.nextFollowUp).toISOString().slice(0, 16)
           : '',
-        assignedTo: lead.assignedTo || '',
+        assignedTo: lead.assignedTo || 'unassigned',
       });
     } else if (!open) {
       // Reset form with default assignment for salespeople
@@ -147,7 +143,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
         estimatedValue: '',
         roofType: '',
         nextFollowUp: '',
-        assignedTo: currentUser?.role === 'salesperson' ? currentUser.id : '',
+        assignedTo: currentUser?.role === 'salesperson' ? currentUser.id : 'unassigned',
       });
     }
   }, [lead, mode, open, reset, currentUser]);
@@ -170,7 +166,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
         estimatedValue: data.estimatedValue ? parseFloat(data.estimatedValue) : undefined,
         roofType: data.roofType || undefined,
         nextFollowUp: data.nextFollowUp ? new Date(data.nextFollowUp).toISOString() : undefined,
-        assignedTo: data.assignedTo || undefined,
+        assignedTo: data.assignedTo && data.assignedTo !== 'unassigned' ? data.assignedTo : undefined,
       };
 
       if (mode === 'edit' && lead) {
@@ -198,17 +194,9 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{mode === 'edit' ? 'Edit Lead' : 'New Lead'}</DialogTitle>
-          <DialogDescription>
-            {mode === 'edit' ? 'Update lead information' : 'Add a new lead to your pipeline'}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+  // Render form content
+  const renderLeadForm = () => (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Contact Information */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-[#C41E3A]">Contact Information</h3>
@@ -347,6 +335,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
                     <SelectItem value="canvass">Canvass</SelectItem>
                     <SelectItem value="referral">Referral</SelectItem>
                     <SelectItem value="website">Website</SelectItem>
+                    <SelectItem value="twenty_crm">Twenty CRM</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -382,6 +371,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
                     <SelectItem value="new">New</SelectItem>
                     <SelectItem value="contacted">Contacted</SelectItem>
                     <SelectItem value="qualified">Qualified</SelectItem>
+                    <SelectItem value="quoted">Quoted</SelectItem>
                     <SelectItem value="proposal_sent">Proposal Sent</SelectItem>
                     <SelectItem value="won">Won</SelectItem>
                     <SelectItem value="lost">Lost</SelectItem>
@@ -428,7 +418,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
                     <SelectValue placeholder="Select user" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {DEMO_USERS.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.name} ({user.role})
@@ -486,24 +476,91 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-[#C41E3A] hover:bg-[#A01830]"
-            >
-              {isSubmitting ? 'Saving...' : mode === 'edit' ? 'Update Lead' : 'Create Lead'}
-            </Button>
-          </DialogFooter>
-        </form>
+      <DialogFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-[#C41E3A] hover:bg-[#A01830]"
+        >
+          {isSubmitting ? 'Saving...' : mode === 'edit' ? 'Update Lead' : 'Create Lead'}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{mode === 'edit' ? lead?.name || 'Edit Lead' : 'New Lead'}</DialogTitle>
+          <DialogDescription>
+            {mode === 'edit' ? 'View and update lead information and notes' : 'Add a new lead to your pipeline'}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Use tabs only in edit mode to show lead details and notes */}
+        {mode === 'edit' && lead ? (
+          <Tabs defaultValue="info" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="info">Info</TabsTrigger>
+              <TabsTrigger value="notes">Notes</TabsTrigger>
+              <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            </TabsList>
+
+            {/* Info Tab - Fetches live data from Twenty CRM */}
+            <TabsContent value="info" className="mt-4">
+              {lead.twentyId ? (
+                <LeadInfoView
+                  leadId={lead.twentyId}
+                  onEdit={() => {
+                    // Open Twenty CRM in new tab
+                    const twentyUrl = `https://crm.thespartanexteriors.com/object/lead/${lead.twentyId}`;
+                    window.open(twentyUrl, '_blank');
+                  }}
+                />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Lead information is only available for leads synced with Twenty CRM.</p>
+                  <p className="text-sm mt-2">This lead does not have a Twenty CRM ID.</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Notes Tab */}
+            <TabsContent value="notes" className="mt-4">
+              {lead.twentyId ? (
+                <NotesTimeline leadId={lead.twentyId} leadName={lead.name} />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Notes are only available for leads synced with Twenty CRM.</p>
+                  <p className="text-sm mt-2">This lead does not have a Twenty CRM ID.</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Tasks Tab */}
+            <TabsContent value="tasks" className="mt-4">
+              {lead.twentyId ? (
+                <TasksTimeline leadId={lead.twentyId} leadName={lead.name} />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Tasks are only available for leads synced with Twenty CRM.</p>
+                  <p className="text-sm mt-2">This lead does not have a Twenty CRM ID.</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          renderLeadForm()
+        )}
       </DialogContent>
     </Dialog>
   );

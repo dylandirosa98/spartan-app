@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Lead, LeadFilters, CreateLead, UpdateLead } from '@/types';
-import { twentyApi } from '@/lib/api/twenty';
 
 interface LeadState {
   leads: Lead[];
@@ -9,8 +8,10 @@ interface LeadState {
   error: string | null;
   filters: LeadFilters;
   searchQuery: string;
+  companyId: string | null;
 
   // Actions
+  setCompanyId: (companyId: string | null) => void;
   fetchLeads: () => Promise<void>;
   addLead: (lead: CreateLead) => Promise<Lead | null>;
   updateLead: (id: string, lead: UpdateLead) => Promise<void>;
@@ -29,85 +30,129 @@ export const useLeadStore = create<LeadState>()(
       error: null,
       filters: {},
       searchQuery: '',
+      companyId: null,
+
+      setCompanyId: (companyId: string | null) => {
+        set({ companyId });
+      },
 
       fetchLeads: async () => {
-        console.log('fetchLeads called - setting loading to true');
+        const { companyId } = get();
+
+        if (!companyId) {
+          console.log('[Lead Store] No company ID set, skipping fetch');
+          set({ leads: [], isLoading: false });
+          return;
+        }
+
+        console.log('[Lead Store] Fetching leads for company:', companyId);
         set({ isLoading: true, error: null });
 
         try {
-          // Fetch directly from Twenty CRM - no local caching
-          console.log('About to call twentyApi.getLeads()');
-          const crmLeads = await twentyApi.getLeads();
-          console.log('CRM leads fetched:', crmLeads.length);
-          console.log('CRM leads:', crmLeads);
-          console.log('Sample lead:', crmLeads[0]);
+          const response = await fetch(`/api/leads?company_id=${companyId}`);
 
-          console.log('About to update store with', crmLeads.length, 'leads');
-          set({ leads: crmLeads, isLoading: false });
-          console.log('Store updated - checking state');
+          if (!response.ok) {
+            throw new Error(`Failed to fetch leads: ${response.statusText}`);
+          }
 
-          // Verify the update
-          const currentState = get();
-          console.log('Current leads in store after update:', currentState.leads.length);
+          const { leads } = await response.json();
+          console.log('[Lead Store] Fetched', leads.length, 'leads from Supabase');
+
+          set({ leads, isLoading: false });
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to fetch leads from Twenty CRM';
-          console.error('Error in fetchLeads:', errorMessage, error);
+          const errorMessage = error instanceof Error ? error.message : 'Failed to fetch leads';
+          console.error('[Lead Store] Error in fetchLeads:', errorMessage, error);
           set({ error: errorMessage, isLoading: false, leads: [] });
         }
       },
 
       addLead: async (leadData: CreateLead) => {
+        const { companyId, fetchLeads } = get();
+
+        if (!companyId) {
+          set({ error: 'No company ID set' });
+          return null;
+        }
+
         set({ isLoading: true, error: null });
 
         try {
-          // Create lead directly in Twenty CRM
-          const newLead = await twentyApi.createLead(leadData);
+          const response = await fetch('/api/leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...leadData, company_id: companyId }),
+          });
 
-          // Refresh leads from CRM to get the updated list
-          const { fetchLeads } = get();
+          if (!response.ok) {
+            throw new Error(`Failed to create lead: ${response.statusText}`);
+          }
+
+          const { lead } = await response.json();
+          console.log('[Lead Store] Created lead:', lead.id);
+
+          // Refresh leads
           await fetchLeads();
 
           set({ isLoading: false });
-          return newLead;
+          return lead;
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to add lead to Twenty CRM';
+          const errorMessage = error instanceof Error ? error.message : 'Failed to add lead';
+          console.error('[Lead Store] Error in addLead:', errorMessage);
           set({ error: errorMessage, isLoading: false });
           return null;
         }
       },
 
       updateLead: async (id: string, leadData: UpdateLead) => {
+        const { fetchLeads } = get();
         set({ isLoading: true, error: null });
 
         try {
-          // Update lead directly in Twenty CRM
-          await twentyApi.updateLead(id, leadData);
+          const response = await fetch('/api/leads', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...leadData, id }),
+          });
 
-          // Refresh leads from CRM to get the updated list
-          const { fetchLeads } = get();
+          if (!response.ok) {
+            throw new Error(`Failed to update lead: ${response.statusText}`);
+          }
+
+          console.log('[Lead Store] Updated lead:', id);
+
+          // Refresh leads
           await fetchLeads();
 
           set({ isLoading: false });
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to update lead in Twenty CRM';
+          const errorMessage = error instanceof Error ? error.message : 'Failed to update lead';
+          console.error('[Lead Store] Error in updateLead:', errorMessage);
           set({ error: errorMessage, isLoading: false });
         }
       },
 
       deleteLead: async (id: string) => {
+        const { fetchLeads } = get();
         set({ isLoading: true, error: null });
 
         try {
-          // Delete from Twenty CRM
-          await twentyApi.deleteLead(id);
+          const response = await fetch(`/api/leads?id=${id}`, {
+            method: 'DELETE',
+          });
 
-          // Refresh leads from CRM to get the updated list
-          const { fetchLeads } = get();
+          if (!response.ok) {
+            throw new Error(`Failed to delete lead: ${response.statusText}`);
+          }
+
+          console.log('[Lead Store] Deleted lead:', id);
+
+          // Refresh leads
           await fetchLeads();
 
           set({ isLoading: false });
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to delete lead from Twenty CRM';
+          const errorMessage = error instanceof Error ? error.message : 'Failed to delete lead';
+          console.error('[Lead Store] Error in deleteLead:', errorMessage);
           set({ error: errorMessage, isLoading: false });
         }
       },

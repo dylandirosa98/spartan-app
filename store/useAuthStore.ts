@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import Cookies from 'js-cookie';
 import { storeApiKey, getApiKey, removeApiKey } from '@/lib/api/encryption';
 import { twentyApi } from '@/lib/api/twenty';
 import { APIConfig, TwentyCRMConfig, User, Permission } from '@/types';
@@ -8,12 +9,14 @@ import { authenticateUser } from '@/lib/demo-users';
 interface AuthState {
   config: APIConfig;
   currentUser: User | null;
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
   setConfig: (twentyConfig: TwentyCRMConfig) => void;
   testConnection: () => Promise<boolean>;
   clearConfig: () => void;
   isConfigured: () => boolean;
   setUser: (user: User) => void;
-  login: (email: string, password: string) => User | null;
+  login: (email: string, password: string) => Promise<User | null>;
   logout: () => void;
   getUserPermissions: () => Permission[];
   hasPermission: (permission: Permission) => boolean;
@@ -33,6 +36,13 @@ export const useAuthStore = create<AuthState>()(
         lastValidated: undefined,
       },
       currentUser: null,
+      _hasHydrated: true, // Default to true to prevent flickering
+
+      setHasHydrated: (state) => {
+        set({
+          _hasHydrated: state
+        });
+      },
 
       setConfig: (twentyConfig: TwentyCRMConfig) => {
         // Store API key securely
@@ -101,8 +111,8 @@ export const useAuthStore = create<AuthState>()(
         set({ currentUser: user });
       },
 
-      login: (email: string, password: string) => {
-        const user = authenticateUser(email, password);
+      login: async (email: string, password: string) => {
+        const user = await authenticateUser(email, password);
         if (user) {
           set({ currentUser: user });
         }
@@ -119,12 +129,20 @@ export const useAuthStore = create<AuthState>()(
       },
 
       hasPermission: (permission: Permission) => {
-        const { currentUser } = get();
+        const { currentUser, _hasHydrated } = get();
+        // If not hydrated yet, allow all permissions to prevent flickering
+        if (!_hasHydrated) {
+          return true;
+        }
         return currentUser?.permissions.includes(permission) || false;
       },
 
       isAuthenticated: () => {
-        const { currentUser } = get();
+        const { currentUser, _hasHydrated } = get();
+        // If not hydrated yet, return true to prevent redirect during hydration
+        if (!_hasHydrated) {
+          return true;
+        }
         return currentUser !== null;
       },
     }),
@@ -132,19 +150,21 @@ export const useAuthStore = create<AuthState>()(
       name: 'spartan-auth-storage',
       storage: {
         getItem: (name) => {
-          // Try localStorage first, fall back to sessionStorage
-          const localValue = localStorage.getItem(name);
-          if (localValue) return localValue;
-          return sessionStorage.getItem(name);
+          // Use localStorage (simpler and more reliable)
+          const value = localStorage.getItem(name);
+          if (value) {
+            console.log('[Auth] Loaded from localStorage, currentUser:',
+              value.includes('currentUser') ? 'found' : 'not found');
+          }
+          return value;
         },
         setItem: (name, value) => {
-          // Store in both for redundancy
+          console.log('[Auth] Saving to localStorage');
           localStorage.setItem(name, value);
-          sessionStorage.setItem(name, value);
         },
         removeItem: (name) => {
+          console.log('[Auth] Removing from localStorage');
           localStorage.removeItem(name);
-          sessionStorage.removeItem(name);
         },
       },
       partialize: (state) => ({
@@ -155,8 +175,18 @@ export const useAuthStore = create<AuthState>()(
             apiKey: '', // Don't persist API key in state (stored separately)
           },
         },
-        currentUser: state.currentUser, // Persist user in storage
+        currentUser: state.currentUser, // Persist user
       }),
+      onRehydrateStorage: () => {
+        return (state, error) => {
+          if (error) {
+            console.log('[Auth] Error during hydration', error);
+          } else {
+            console.log('[Auth] Hydration finished, currentUser:', state?.currentUser?.email || 'null');
+            state?.setHasHydrated(true);
+          }
+        };
+      },
     }
   )
 );

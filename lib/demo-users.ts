@@ -75,26 +75,61 @@ export function getPermissionsForRole(role: string): Permission[] {
 
 /**
  * Authentication function
+ * Checks both demo users (admin) and database users (company users)
  */
-export function authenticateUser(
+export async function authenticateUser(
   email: string,
   password: string
-): User | null {
-  // Check password
-  if (password !== 'Bubs2shiesty$') {
-    return null;
+): Promise<User | null> {
+  // 1. Check if it's the master admin (hardcoded)
+  const adminUser = DEMO_USERS.find(u => u.email === email && u.role === 'master_admin');
+  if (adminUser && password === 'Bubs2shiesty$') {
+    return {
+      ...adminUser,
+      lastLoginAt: new Date().toISOString(),
+    };
   }
 
-  const user = DEMO_USERS.find((u) => u.email === email);
-  if (!user) {
+  // 2. Check company users via API
+  try {
+    const response = await fetch('/api/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const { user } = await response.json();
+
+    // Convert to User type with permissions
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      company_id: user.company_id,
+      permissions: getPermissionsForRole(user.role),
+      avatar: undefined,
+      createdAt: user.createdAt,
+      lastLoginAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('Database login error:', error);
+
+    // Fallback: check original DEMO_USERS for company owner
+    const demoUser = DEMO_USERS.find((u) => u.email === email);
+    if (demoUser && password === 'Bubs2shiesty$') {
+      return {
+        ...demoUser,
+        lastLoginAt: new Date().toISOString(),
+      };
+    }
+
     return null;
   }
-
-  // Return user with updated lastLoginAt
-  return {
-    ...user,
-    lastLoginAt: new Date().toISOString(),
-  };
 }
 
 /**

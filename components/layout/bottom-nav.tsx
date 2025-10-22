@@ -35,24 +35,36 @@ const navItems = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { hasPermission } = useAuthStore();
+  const { currentUser } = useAuthStore();
 
-  // Filter nav items based on user permissions
-  const visibleNavItems = navItems.filter((item) =>
-    hasPermission(item.requiredPermission)
-  );
+  // Show all nav items - don't filter by permissions
+  const visibleNavItems = navItems;
+
+  // Generate company-specific URL
+  const getCompanyUrl = (href: string) => {
+    if (currentUser?.company_id) {
+      return `/company/${currentUser.company_id}${href}`;
+    }
+    // Fallback: try to extract company_id from current pathname
+    const companyMatch = pathname?.match(/^\/company\/([^\/]+)/);
+    if (companyMatch) {
+      return `/company/${companyMatch[1]}${href}`;
+    }
+    return href;
+  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white pb-safe md:hidden">
       <div className="flex h-18 items-center justify-around">
         {visibleNavItems.map((item) => {
-          const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+          const companyHref = getCompanyUrl(item.href);
+          const isActive = pathname === companyHref || pathname?.startsWith(`${companyHref}/`);
           const Icon = item.icon;
 
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={companyHref}
               className={cn(
                 'flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 px-3 py-2 text-xs font-medium transition-colors',
                 isActive

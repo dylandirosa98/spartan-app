@@ -44,29 +44,41 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { hasPermission, currentUser, logout } = useAuthStore();
+  const { currentUser, logout } = useAuthStore();
 
-  // Filter nav items based on user permissions
-  const visibleNavItems = navItems.filter((item) =>
-    hasPermission(item.requiredPermission)
-  );
+  // Show all nav items - don't filter by permissions
+  const visibleNavItems = navItems;
 
   const handleLogout = () => {
     logout();
     router.push('/login');
   };
 
+  // Generate company-specific URL
+  const getCompanyUrl = (href: string) => {
+    if (currentUser?.company_id) {
+      return `/company/${currentUser.company_id}${href}`;
+    }
+    // Fallback: try to extract company_id from current pathname
+    const companyMatch = pathname?.match(/^\/company\/([^\/]+)/);
+    if (companyMatch) {
+      return `/company/${companyMatch[1]}${href}`;
+    }
+    return href;
+  };
+
   return (
     <aside className="hidden md:fixed md:left-0 md:top-16 md:flex md:h-[calc(100vh-4rem)] md:w-60 md:flex-col md:border-r md:bg-white">
       <nav className="flex-1 space-y-1 px-3 py-4">
         {visibleNavItems.map((item) => {
-          const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+          const companyHref = getCompanyUrl(item.href);
+          const isActive = pathname === companyHref || pathname?.startsWith(`${companyHref}/`);
           const Icon = item.icon;
 
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={companyHref}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                 isActive

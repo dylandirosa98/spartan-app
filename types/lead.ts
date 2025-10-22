@@ -9,7 +9,8 @@ export type LeadSource =
   | 'facebook_ads'
   | 'canvass'
   | 'referral'
-  | 'website';
+  | 'website'
+  | 'twenty_crm';
 
 /**
  * Lead medium types - the marketing medium
@@ -29,6 +30,7 @@ export type LeadStatus =
   | 'new'
   | 'contacted'
   | 'qualified'
+  | 'quoted'
   | 'proposal_sent'
   | 'won'
   | 'lost';
@@ -44,32 +46,70 @@ export type PropertyType = 'residential' | 'commercial';
 export type SyncStatus = 'synced' | 'pending' | 'error';
 
 /**
- * Complete Lead interface
+ * Complete Lead interface matching Twenty CRM Lead object
  */
 export interface Lead {
   id: string;
+  company_id?: string;
+  twenty_id?: string | null;
+  twentyId?: string | null; // Alias for twenty_id (camelCase)
+
+  // Basic Information
   name: string;
-  phone: string;
-  email?: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  source: LeadSource;
-  medium: LeadMedium;
+  phone: string | null;
+  email?: string | null;
+  address: string | null; // Maps to "adress" in Twenty (typo in their schema)
+  city: string | null;
+  state: string | null;
+  zip_code?: string | null;
+  zipCode?: string; // Alias for zip_code
+
+  // Lead Details
+  source: LeadSource | string;
+  medium?: LeadMedium;
   status: LeadStatus;
   stage?: string; // Twenty CRM stage (e.g., "New", "Contacted", "Qualified", "Proposal", "Won", "Lost")
-  notes?: string;
-  estimatedValue?: number;
+  notes?: string | null;
+  estimatedValue?: number; // Maps to "estValue" in Twenty
   roofType?: string;
   propertyType?: PropertyType;
   assignedTo?: string;
+  assigned_to?: string | null; // Supabase field
+  salesRep?: string; // Twenty CRM salesRep enum
+
+  // UTM Tracking Parameters (from Twenty CRM)
+  rawUtmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
+  utmContent?: string | null;
+  utmTerm?: string | null;
+  gclid?: string | null; // Google Click ID
+  fbclid?: string | null; // Facebook Click ID
+  wbraid?: string | null; // Google wbraid parameter
+
+  // AI & Appointments (from Twenty CRM)
+  aiSummary?: string | null;
+  appointmentTime?: string | null;
+
+  // Media
   photos?: string[];
-  createdAt: string;
-  updatedAt: string;
+  callPage?: any; // Links type from Twenty CRM
+
+  // Timestamps
+  createdAt?: string;
+  created_at?: string; // Supabase field
+  updatedAt?: string;
+  updated_at?: string; // Supabase field
+  deletedAt?: string | null; // Twenty CRM soft delete
   nextFollowUp?: string;
+
+  // Sync Status
   syncStatus?: SyncStatus;
   lastSyncedAt?: Date;
+
+  // Relations (from Twenty CRM)
+  createdBy?: any; // Actor type
+  position?: number; // Position in list
 }
 
 /**
@@ -96,7 +136,8 @@ export const LeadSchema = z.object({
     'facebook_ads',
     'canvass',
     'referral',
-    'website'
+    'website',
+    'twenty_crm'
   ]),
   medium: z.enum([
     'cpc',
@@ -110,6 +151,7 @@ export const LeadSchema = z.object({
     'new',
     'contacted',
     'qualified',
+    'quoted',
     'proposal_sent',
     'won',
     'lost'

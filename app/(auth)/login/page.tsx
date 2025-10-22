@@ -61,7 +61,7 @@ export default function LoginPage() {
    */
   const onSubmit = async (data: LoginFormData) => {
     try {
-      const user = login(data.email, data.password);
+      const user = await login(data.email, data.password);
 
       if (!user) {
         toast({
@@ -81,7 +81,11 @@ export default function LoginPage() {
       setTimeout(() => {
         if (user.role === 'master_admin') {
           router.push('/admin/dashboard');
+        } else if (user.company_id) {
+          // Redirect to company-specific leads page
+          router.push(`/company/${user.company_id}/leads`);
         } else {
+          // Fallback to generic leads page if no company_id
           router.push('/leads');
         }
       }, 500);

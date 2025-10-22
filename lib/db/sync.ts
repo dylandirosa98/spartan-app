@@ -166,40 +166,98 @@ export async function syncLeads(): Promise<SyncResult> {
 }
 
 /**
- * Sync leads from Twenty CRM to local database
+ * Get the last sync timestamp from localStorage
+ */
+function getLastSyncTimestamp(): Date | null {
+  if (typeof window === 'undefined') return null;
+
+  const lastSync = localStorage.getItem('lastSyncTimestamp');
+  return lastSync ? new Date(lastSync) : null;
+}
+
+/**
+ * Save the last sync timestamp to localStorage
+ */
+function setLastSyncTimestamp(timestamp: Date): void {
+  if (typeof window === 'undefined') return;
+
+  localStorage.setItem('lastSyncTimestamp', timestamp.toISOString());
+}
+
+/**
+ * Sync leads from Twenty CRM to local database (DELTA SYNC)
  *
- * This function will fetch all leads from Twenty CRM and update
- * the local database, useful for initial sync or pulling remote changes.
+ * This function uses delta sync to only fetch leads that have changed
+ * since the last sync, making it much more efficient than full sync.
  *
+ * @param forceFull - Force a full sync even if delta is available
  * @returns Promise with number of leads synced
  */
-export async function syncLeadsFromTwenty(): Promise<number> {
+export async function syncLeadsFromTwenty(forceFull: boolean = false): Promise<number> {
   if (!isOnline()) {
     console.log('Device is offline. Cannot sync from Twenty CRM.');
     return 0;
   }
 
   try {
-    // Fetch all leads from Twenty CRM (already transformed to Lead format)
-    const leads = await twentyApi.getLeads();
+    const lastSync = getLastSyncTimestamp();
+    const now = new Date();
+
+    // If no last sync or force full, do a full sync
+    if (!lastSync || forceFull) {
+      console.log('[Sync] Performing FULL sync (no previous sync found)');
+
+      // Fetch all leads from Twenty CRM
+      const leads = await twentyApi.getLeads();
+      let syncedCount = 0;
+
+      // Store each lead with sync metadata
+      for (const lead of leads) {
+        const syncedLead: Lead = {
+          ...lead,
+          syncStatus: 'synced',
+          lastSyncedAt: now,
+        };
+
+        await db.leads.put(syncedLead);
+        syncedCount++;
+      }
+
+      setLastSyncTimestamp(now);
+      console.log(`✅ Full sync complete: ${syncedCount} leads synced`);
+      return syncedCount;
+    }
+
+    // DELTA SYNC: Only fetch leads changed since last sync
+    console.log(`[Sync] Performing DELTA sync (changes since ${lastSync.toISOString()})`);
+
+    const allLeads = await twentyApi.getLeads();
+
+    // Filter to only leads updated after last sync
+    const changedLeads = allLeads.filter(lead => {
+      if (!lead.updatedAt) return false;
+      const leadUpdated = new Date(lead.updatedAt);
+      return leadUpdated > lastSync;
+    });
+
+    console.log(`[Sync] Found ${changedLeads.length} changed leads out of ${allLeads.length} total`);
 
     let syncedCount = 0;
 
-    // Store each lead with sync metadata
-    for (const lead of leads) {
-      // Update sync metadata
+    // Update only the changed leads
+    for (const lead of changedLeads) {
       const syncedLead: Lead = {
         ...lead,
         syncStatus: 'synced',
-        lastSyncedAt: new Date(),
+        lastSyncedAt: now,
       };
 
-      // Put (insert or update) the lead
       await db.leads.put(syncedLead);
       syncedCount++;
     }
 
-    console.log(`Synced ${syncedCount} leads from Twenty CRM`);
+    setLastSyncTimestamp(now);
+    console.log(`✅ Delta sync complete: ${syncedCount} leads updated`);
     return syncedCount;
   } catch (error) {
     console.error('Failed to sync leads from Twenty CRM:', error);
@@ -223,9 +281,12 @@ export function initializeSyncListeners(syncInterval: number = 5 * 60 * 1000): v
 
   // Sync when coming back online
   window.addEventListener('online', async () => {
-    console.log('Connection restored. Starting sync...');
+    console.log('Connection restored. Starting bidirectional sync...');
     try {
+      // Push local changes to Twenty
       await syncLeads();
+      // Pull remote changes from Twenty (delta sync)
+      await syncLeadsFromTwenty();
     } catch (error) {
       console.error('Auto-sync failed:', error);
     }
@@ -236,11 +297,15 @@ export function initializeSyncListeners(syncInterval: number = 5 * 60 * 1000): v
     console.log('Connection lost. Leads will be synced when connection is restored.');
   });
 
-  // Periodic sync (only when online)
+  // Periodic bidirectional sync (only when online)
   setInterval(async () => {
     if (isOnline()) {
       try {
+        console.log('[Sync] Running periodic bidirectional sync...');
+        // Push local changes to Twenty
         await syncLeads();
+        // Pull remote changes from Twenty (delta sync)
+        await syncLeadsFromTwenty();
       } catch (error) {
         console.error('Periodic sync failed:', error);
       }
@@ -249,9 +314,17 @@ export function initializeSyncListeners(syncInterval: number = 5 * 60 * 1000): v
 
   // Initial sync on load
   if (isOnline()) {
-    syncLeads().catch((error) => {
-      console.error('Initial sync failed:', error);
-    });
+    (async () => {
+      try {
+        console.log('[Sync] Running initial bidirectional sync...');
+        // Push local changes first
+        await syncLeads();
+        // Then pull remote changes (will be full sync if first time)
+        await syncLeadsFromTwenty();
+      } catch (error) {
+        console.error('Initial sync failed:', error);
+      }
+    })();
   }
 
   console.log('Sync listeners initialized');
