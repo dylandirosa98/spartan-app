@@ -149,8 +149,10 @@ export const useAuthStore = create<AuthState>()(
       name: 'spartan-auth-storage',
       storage: {
         getItem: (name) => {
-          // Use localStorage (simpler and more reliable)
-          const value = localStorage.getItem(name);
+          // Check if we're in browser environment
+          if (typeof window === 'undefined') return null;
+
+          const value = window.localStorage.getItem(name);
           if (value) {
             console.log('[Auth] Loaded from localStorage, currentUser:',
               value.includes('currentUser') ? 'found' : 'not found');
@@ -158,12 +160,18 @@ export const useAuthStore = create<AuthState>()(
           return value as any;
         },
         setItem: (name, value) => {
+          // Check if we're in browser environment
+          if (typeof window === 'undefined') return;
+
           console.log('[Auth] Saving to localStorage');
-          localStorage.setItem(name, value as unknown as string);
+          window.localStorage.setItem(name, value as unknown as string);
         },
         removeItem: (name) => {
+          // Check if we're in browser environment
+          if (typeof window === 'undefined') return;
+
           console.log('[Auth] Removing from localStorage');
-          localStorage.removeItem(name);
+          window.localStorage.removeItem(name);
         },
       },
       partialize: (state) => ({
