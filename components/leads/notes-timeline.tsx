@@ -103,7 +103,7 @@ export function NotesTimeline({ leadId, leadName }: NotesTimelineProps) {
         throw new Error('Failed to create note');
       }
 
-      const data = await response.json();
+      await response.json();
 
       toast({
         title: 'Note created',

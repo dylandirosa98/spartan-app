@@ -453,12 +453,14 @@ export default function CalendarPage() {
                       Contact Info
                     </h4>
 
-                    <div className="flex items-center text-sm">
-                      <Phone className="h-4 w-4 mr-3 text-[#C41E3A]" />
-                      <a href={`tel:${selectedLead.phone}`} className="text-blue-600 hover:underline">
-                        {formatPhone(selectedLead.phone)}
-                      </a>
-                    </div>
+                    {selectedLead.phone && (
+                      <div className="flex items-center text-sm">
+                        <Phone className="h-4 w-4 mr-3 text-[#C41E3A]" />
+                        <a href={`tel:${selectedLead.phone}`} className="text-blue-600 hover:underline">
+                          {formatPhone(selectedLead.phone)}
+                        </a>
+                      </div>
+                    )}
 
                     {selectedLead.email && (
                       <div className="flex items-center text-sm">
@@ -498,12 +500,14 @@ export default function CalendarPage() {
                       </div>
                     )}
 
-                    <div className="flex items-center text-sm">
-                      <CalendarIcon className="h-4 w-4 mr-3 text-[#C41E3A]" />
-                      <span className="text-gray-600">
-                        Created: {format(parseISO(selectedLead.createdAt), 'MMM d, yyyy')}
-                      </span>
-                    </div>
+                    {selectedLead.createdAt && (
+                      <div className="flex items-center text-sm">
+                        <CalendarIcon className="h-4 w-4 mr-3 text-[#C41E3A]" />
+                        <span className="text-gray-600">
+                          Created: {format(parseISO(selectedLead.createdAt), 'MMM d, yyyy')}
+                        </span>
+                      </div>
+                    )}
 
                     {selectedLead.roofType && (
                       <div className="text-sm">
@@ -533,10 +537,12 @@ export default function CalendarPage() {
                       <span className="font-medium">Source:</span>{' '}
                       {selectedLead.source.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                     </span>
-                    <span className="text-gray-600">
-                      <span className="font-medium">Medium:</span>{' '}
-                      {selectedLead.medium.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                    </span>
+                    {selectedLead.medium && (
+                      <span className="text-gray-600">
+                        <span className="font-medium">Medium:</span>{' '}
+                        {selectedLead.medium.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </span>
+                    )}
                   </div>
                 </div>
 

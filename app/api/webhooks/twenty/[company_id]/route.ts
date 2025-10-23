@@ -151,7 +151,7 @@ export async function POST(
  * GET endpoint to verify webhook is working
  */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { company_id: string } }
 ) {
   const companyId = params.company_id;

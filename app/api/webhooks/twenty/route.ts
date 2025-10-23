@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
  */
 async function getCompanyIdFromWebhook(
   request: NextRequest,
-  leadData: any
+  _leadData: any
 ): Promise<string | null> {
   // For now, try to match by the webhook URL query parameter
   // Example: /api/webhooks/twenty?company=<company_id>

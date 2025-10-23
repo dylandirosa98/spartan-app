@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import Cookies from 'js-cookie';
 import { storeApiKey, getApiKey, removeApiKey } from '@/lib/api/encryption';
 import { twentyApi } from '@/lib/api/twenty';
 import { APIConfig, TwentyCRMConfig, User, Permission } from '@/types';
@@ -156,11 +155,11 @@ export const useAuthStore = create<AuthState>()(
             console.log('[Auth] Loaded from localStorage, currentUser:',
               value.includes('currentUser') ? 'found' : 'not found');
           }
-          return value;
+          return value as any;
         },
         setItem: (name, value) => {
           console.log('[Auth] Saving to localStorage');
-          localStorage.setItem(name, value);
+          localStorage.setItem(name, value as unknown as string);
         },
         removeItem: (name) => {
           console.log('[Auth] Removing from localStorage');
@@ -176,7 +175,7 @@ export const useAuthStore = create<AuthState>()(
           },
         },
         currentUser: state.currentUser, // Persist user
-      }),
+      } as any),
       onRehydrateStorage: () => {
         return (state, error) => {
           if (error) {

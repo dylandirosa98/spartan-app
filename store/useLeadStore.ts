@@ -204,7 +204,7 @@ export const useLeadStore = create<LeadState>()(
         // Apply source filter
         if (filters.source && filters.source.length > 0) {
           filteredLeads = filteredLeads.filter((lead) =>
-            filters.source!.includes(lead.source)
+            filters.source!.includes(lead.source as any)
           );
         }
 
@@ -218,6 +218,7 @@ export const useLeadStore = create<LeadState>()(
         // Apply date range filter
         if (filters.dateFrom || filters.dateTo) {
           filteredLeads = filteredLeads.filter((lead) => {
+            if (!lead.createdAt) return false;
             const createdDate = new Date(lead.createdAt);
             const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : new Date(0);
             const toDate = filters.dateTo ? new Date(filters.dateTo) : new Date();

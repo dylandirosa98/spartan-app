@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { Calendar, dateFnsLocalizer, View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, addHours } from 'date-fns';
-import enUS from 'date-fns/locale/en-US';
+import { enUS } from 'date-fns/locale/en-US';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -320,15 +320,15 @@ export function TaskCalendar() {
               length={view === 'agenda' ? agendaLength : undefined}
               components={{
                 agenda: {
-                  date: ({ day }: { day: Date }) => {
+                  date: (({ day }: { day: Date }) => {
                     return <span>{format(day, 'EEE MMM d, yyyy')}</span>;
-                  },
-                  time: ({ event }: { event: CalendarEvent }) => {
+                  }) as any,
+                  time: (({ event }: { event: CalendarEvent }) => {
                     return <span>{format(event.start, 'h:mm a')}</span>;
-                  },
-                  event: ({ event }: { event: CalendarEvent }) => {
+                  }) as any,
+                  event: (({ event }: { event: CalendarEvent }) => {
                     return <span>{event.title}</span>;
-                  },
+                  }) as any,
                 },
               }}
             />

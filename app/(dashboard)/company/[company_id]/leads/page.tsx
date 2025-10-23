@@ -490,7 +490,7 @@ export default function LeadsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">New</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {filteredLeads.filter((l) => l.status === 'NEW').length}
+                    {filteredLeads.filter((l) => l.status === 'new').length}
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
@@ -506,7 +506,7 @@ export default function LeadsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Scheduled</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {filteredLeads.filter((l) => l.status === 'SCHEDULED').length}
+                    {filteredLeads.filter((l) => l.status === 'contacted').length}
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
@@ -522,7 +522,7 @@ export default function LeadsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Won</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {filteredLeads.filter((l) => l.status === 'WON').length}
+                    {filteredLeads.filter((l) => l.status === 'won').length}
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">

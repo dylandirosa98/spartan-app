@@ -150,13 +150,13 @@ function leadToTwentyPerson(lead: Partial<Lead>): CreateTwentyPersonPayload {
       firstName,
       lastName,
     },
-    email: lead.email,
-    phone: lead.phone,
+    email: lead.email || undefined,
+    phone: lead.phone || undefined,
     address: {
-      street: lead.address,
-      city: lead.city,
-      state: lead.state,
-      postalCode: lead.zipCode,
+      street: lead.address || undefined,
+      city: lead.city || undefined,
+      state: lead.state || undefined,
+      postalCode: lead.zipCode || undefined,
     },
   };
 }

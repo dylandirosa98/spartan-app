@@ -12,7 +12,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -32,14 +31,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   UserPlus,
   RefreshCw,
   Smartphone,
@@ -48,16 +39,6 @@ import {
   EyeOff,
   UserCheck,
 } from 'lucide-react';
-
-interface MobileUser {
-  id: string;
-  username: string;
-  email: string;
-  salesRep: string;
-  companyId: string;
-  role: string;
-  createdAt: string;
-}
 
 interface UserFormData {
   username: string;
@@ -71,7 +52,6 @@ export default function MobileUsersPage() {
   const companyId = params.company_id as string;
   const { toast } = useToast();
 
-  const [users, setUsers] = useState<MobileUser[]>([]);
   const [salesReps, setSalesReps] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFetchingSalesReps, setIsFetchingSalesReps] = useState(false);
@@ -113,31 +93,10 @@ export default function MobileUsersPage() {
     }
   };
 
-  // Load users (currently no GET endpoint - would need to create one)
-  const fetchUsers = async () => {
-    if (!companyId) return;
-
-    try {
-      setIsLoading(true);
-      // TODO: Create GET endpoint to list mobile users
-      // For now, just show empty state
-      setUsers([]);
-    } catch (error) {
-      console.error('[Mobile Users] Error fetching users:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load users',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (companyId) {
       fetchSalesReps();
-      fetchUsers();
+      setIsLoading(false);
     }
   }, [companyId]);
 
@@ -201,9 +160,6 @@ export default function MobileUsersPage() {
           salesRep: '',
         });
         setShowCreateDialog(false);
-
-        // Reload users
-        fetchUsers();
       } else {
         throw new Error(data.error || data.message || 'Failed to create user');
       }
@@ -238,7 +194,6 @@ export default function MobileUsersPage() {
               variant="outline"
               onClick={() => {
                 fetchSalesReps();
-                fetchUsers();
               }}
               disabled={isLoading || isFetchingSalesReps}
             >

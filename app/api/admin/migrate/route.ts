@@ -10,7 +10,7 @@ const supabase = createClient(
  * POST /api/admin/migrate
  * Run pending database migrations
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     console.log('[Migration] Running mobile_users table migration...');
 
@@ -59,7 +59,7 @@ END $$;`
           console.error('[Migration] Statement failed:', errorText);
 
           // Try alternative: use from() with raw query
-          const { data, error } = await supabase.from('mobile_users').select('sales_rep').limit(1);
+          const { data: _data, error } = await supabase.from('mobile_users').select('sales_rep').limit(1);
 
           if (error && error.message.includes('column "sales_rep" does not exist')) {
             console.log('[Migration] Column sales_rep does not exist, needs to be added');

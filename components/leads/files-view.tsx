@@ -11,7 +11,6 @@ import {
   File,
   Image as ImageIcon,
   FileText,
-  Download,
   Trash2,
   ExternalLink,
   X
@@ -32,7 +31,7 @@ interface FilesViewProps {
   leadName: string;
 }
 
-export function FilesView({ leadId, leadName }: FilesViewProps) {
+export function FilesView({ leadId, leadName: _leadName }: FilesViewProps) {
   const params = useParams();
   const companyId = params.company_id as string;
   const { toast } = useToast();

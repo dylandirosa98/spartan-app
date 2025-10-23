@@ -1,23 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 /**
  * POST /api/admin/create-mobile-users-table
  * Create the mobile_users table using direct PostgreSQL connection
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   const { Client } = require('pg');
 
   // Use the pooled connection URL for better compatibility
   const connectionString = process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING;
 
+  if (!connectionString) {
+    return NextResponse.json(
+      { error: 'Database connection string not configured' },
+      { status: 500 }
+    );
+  }
+
   // Parse connection string and configure SSL properly for Supabase
-  const config = {
+  const config: any = {
     connectionString,
   };
 

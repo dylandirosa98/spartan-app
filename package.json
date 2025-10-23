@@ -55,6 +55,7 @@
     "@types/node": "^20.11.25",
     "@types/pg": "^8.15.5",
     "@types/react": "^18.2.64",
+    "@types/react-big-calendar": "^1.16.3",
     "@types/react-dom": "^18.2.21",
     "@typescript-eslint/eslint-plugin": "^7.1.1",
     "@typescript-eslint/parser": "^7.1.1",

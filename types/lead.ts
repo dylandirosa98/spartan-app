@@ -172,13 +172,50 @@ export const LeadSchema = z.object({
 
 /**
  * Zod schema for creating a new lead (without id, timestamps)
+ * Relaxed validation - many fields optional for Twenty CRM compatibility
  */
-export const CreateLeadSchema = LeadSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  syncStatus: true,
-  lastSyncedAt: true,
+export const CreateLeadSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200, 'Name is too long'),
+  phone: z.string().max(20, 'Phone number is too long').optional(),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  address: z.string().max(300, 'Address is too long').optional(),
+  city: z.string().max(100, 'City name is too long').optional(),
+  state: z.string().max(2, 'Use 2-letter state code').optional(),
+  zipCode: z.string().max(10, 'ZIP code is too long').optional(),
+  source: z.enum([
+    'google_ads',
+    'google_lsa',
+    'facebook_ads',
+    'canvass',
+    'referral',
+    'website',
+    'twenty_crm'
+  ]),
+  medium: z.enum([
+    'cpc',
+    'lsas',
+    'social_ads',
+    'canvass',
+    'referral',
+    'organic'
+  ]),
+  status: z.enum([
+    'new',
+    'contacted',
+    'qualified',
+    'quoted',
+    'proposal_sent',
+    'won',
+    'lost'
+  ]),
+  stage: z.string().max(100, 'Stage name is too long').optional(),
+  notes: z.string().max(5000, 'Notes are too long').optional(),
+  estimatedValue: z.number().min(0, 'Estimated value must be positive').optional(),
+  roofType: z.string().max(100, 'Roof type is too long').optional(),
+  propertyType: z.enum(['residential', 'commercial']).optional(),
+  assignedTo: z.string().uuid('Invalid assignedTo ID format').optional(),
+  photos: z.array(z.string().url('Invalid photo URL')).optional(),
+  nextFollowUp: z.string().datetime('Invalid nextFollowUp date format').optional(),
 });
 
 /**

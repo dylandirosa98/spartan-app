@@ -7,11 +7,6 @@
 import { db } from '@/lib/db/dexie';
 import { TwentyCRMClient } from '@/lib/api/twenty-crm';
 
-interface SyncMetadata {
-  lastSyncedAt: string;
-  companyId: string;
-}
-
 export class DeltaSyncService {
   private twentyClient: TwentyCRMClient;
   private companyId: string;

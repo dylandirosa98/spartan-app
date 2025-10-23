@@ -122,12 +122,6 @@ export async function POST(request: NextRequest) {
     // Decrypt API key
     const decryptedApiKey = decrypt(company.twenty_api_key);
 
-    // Create Twenty CRM client
-    const twentyClient = new TwentyCRMClient(
-      company.twenty_api_url,
-      decryptedApiKey
-    );
-
     const graphqlUrl = `${company.twenty_api_url.replace(/\/$/, '')}/graphql`;
     console.log('[Files API] GraphQL URL:', graphqlUrl);
 

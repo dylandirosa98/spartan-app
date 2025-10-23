@@ -48,7 +48,7 @@ interface LeadInfoViewProps {
   onEdit?: () => void;
 }
 
-export function LeadInfoView({ leadId, onEdit }: LeadInfoViewProps) {
+export function LeadInfoView({ leadId, onEdit: _onEdit }: LeadInfoViewProps) {
   const params = useParams();
   const companyId = params.company_id as string;
   const { toast } = useToast();
@@ -145,16 +145,6 @@ export function LeadInfoView({ leadId, onEdit }: LeadInfoViewProps) {
     if (!estValue || !estValue.amountMicros) return '—';
     const dollars = estValue.amountMicros / 1000000;
     return `$${dollars.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  // Format enum values (UPPERCASE -> Capitalized)
-  const formatEnum = (value: string | null) => {
-    if (!value) return '—';
-    return value
-      .toLowerCase()
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
   };
 
   // Editable field component
