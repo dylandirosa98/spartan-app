@@ -75,14 +75,17 @@ export function getPermissionsForRole(role: string): Permission[] {
 
 /**
  * Authentication function
- * Checks both demo users (admin) and database users (company users)
+ * Checks demo users (admin), database users (company users), and mobile users (sales reps)
+ *
+ * @param emailOrUsername - Can be email (for admin/company users) or username (for mobile users)
+ * @param password - User's password
  */
 export async function authenticateUser(
-  email: string,
+  emailOrUsername: string,
   password: string
 ): Promise<User | null> {
   // 1. Check if it's the master admin (hardcoded)
-  const adminUser = DEMO_USERS.find(u => u.email === email && u.role === 'master_admin');
+  const adminUser = DEMO_USERS.find(u => u.email === emailOrUsername && u.role === 'master_admin');
   if (adminUser && password === 'Bubs2shiesty$') {
     return {
       ...adminUser,
@@ -90,12 +93,45 @@ export async function authenticateUser(
     };
   }
 
-  // 2. Check company users via API
+  // 2. Check if it's a mobile user (username-based login)
+  // Mobile users use username instead of email
+  if (!emailOrUsername.includes('@')) {
+    try {
+      const response = await fetch('/api/mobile-users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: emailOrUsername, password }),
+      });
+
+      if (response.ok) {
+        const { user } = await response.json();
+
+        // Convert mobile user to User type with permissions
+        return {
+          id: user.id,
+          name: user.username, // Use username as display name
+          email: user.email,
+          username: user.username,
+          role: 'salesperson', // Mobile users are sales reps
+          company_id: user.companyId,
+          salesRep: user.salesRep, // Store the sales rep name for filtering
+          permissions: getPermissionsForRole('salesperson'),
+          avatar: undefined,
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+        };
+      }
+    } catch (error) {
+      console.error('Mobile user login error:', error);
+    }
+  }
+
+  // 3. Check company users via API (email-based login)
   try {
     const response = await fetch('/api/users/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: emailOrUsername, password }),
     });
 
     if (!response.ok) {
@@ -120,7 +156,7 @@ export async function authenticateUser(
     console.error('Database login error:', error);
 
     // Fallback: check original DEMO_USERS for company owner
-    const demoUser = DEMO_USERS.find((u) => u.email === email);
+    const demoUser = DEMO_USERS.find((u) => u.email === emailOrUsername);
     if (demoUser && password === 'Bubs2shiesty$') {
       return {
         ...demoUser,

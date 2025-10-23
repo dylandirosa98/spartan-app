@@ -9,10 +9,12 @@ interface LeadState {
   filters: LeadFilters;
   searchQuery: string;
   companyId: string | null;
+  salesRepFilter: string | null; // For mobile users - filter by sales rep
 
   // Actions
   setCompanyId: (companyId: string | null) => void;
-  fetchLeads: () => Promise<void>;
+  setSalesRepFilter: (salesRep: string | null) => void;
+  fetchLeads: (salesRep?: string) => Promise<void>;
   addLead: (lead: CreateLead) => Promise<Lead | null>;
   updateLead: (id: string, lead: UpdateLead) => Promise<void>;
   deleteLead: (id: string) => Promise<void>;
@@ -31,13 +33,18 @@ export const useLeadStore = create<LeadState>()(
       filters: {},
       searchQuery: '',
       companyId: null,
+      salesRepFilter: null,
 
       setCompanyId: (companyId: string | null) => {
         set({ companyId });
       },
 
-      fetchLeads: async () => {
-        const { companyId } = get();
+      setSalesRepFilter: (salesRep: string | null) => {
+        set({ salesRepFilter: salesRep });
+      },
+
+      fetchLeads: async (salesRep?: string) => {
+        const { companyId, salesRepFilter } = get();
 
         if (!companyId) {
           console.log('[Lead Store] No company ID set, skipping fetch');
@@ -45,18 +52,25 @@ export const useLeadStore = create<LeadState>()(
           return;
         }
 
-        console.log('[Lead Store] Fetching leads for company:', companyId);
+        // Use provided salesRep parameter or the stored filter
+        const effectiveSalesRep = salesRep || salesRepFilter;
+
+        console.log('[Lead Store] Fetching leads for company:', companyId, effectiveSalesRep ? `(salesRep: ${effectiveSalesRep})` : '');
         set({ isLoading: true, error: null });
 
         try {
-          const response = await fetch(`/api/leads?company_id=${companyId}`);
+          const url = effectiveSalesRep
+            ? `/api/leads?company_id=${companyId}&salesRep=${encodeURIComponent(effectiveSalesRep)}`
+            : `/api/leads?company_id=${companyId}`;
+
+          const response = await fetch(url);
 
           if (!response.ok) {
             throw new Error(`Failed to fetch leads: ${response.statusText}`);
           }
 
           const { leads } = await response.json();
-          console.log('[Lead Store] Fetched', leads.length, 'leads from Supabase');
+          console.log('[Lead Store] Fetched', leads.length, 'leads', effectiveSalesRep ? `for sales rep: ${effectiveSalesRep}` : '');
 
           set({ leads, isLoading: false });
         } catch (error) {
@@ -175,11 +189,16 @@ export const useLeadStore = create<LeadState>()(
 
         let filteredLeads = [...leads];
 
-        // Apply status filter
+        // Apply status filter - handle both exact match and case-insensitive match
         if (filters.status && filters.status.length > 0) {
-          filteredLeads = filteredLeads.filter((lead) =>
-            filters.status!.includes(lead.status)
-          );
+          filteredLeads = filteredLeads.filter((lead) => {
+            if (!lead.status) return false;
+            // Direct match or case-insensitive match
+            return filters.status!.some(filterStatus =>
+              lead.status === filterStatus ||
+              lead.status.toLowerCase() === filterStatus.toLowerCase()
+            );
+          });
         }
 
         // Apply source filter

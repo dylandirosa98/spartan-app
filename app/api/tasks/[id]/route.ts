@@ -154,7 +154,42 @@ export async function DELETE(
       decryptedApiKey
     );
 
-    // Delete task mutation
+    // First, delete all taskTargets associated with this task
+    const deleteTaskTargetsQuery = `
+      query GetTaskTargets($taskId: UUID!) {
+        taskTargets(filter: { taskId: { eq: $taskId } }) {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+    `;
+
+    const taskTargetsData = await (twentyClient as any).request(deleteTaskTargetsQuery, {
+      taskId,
+    });
+
+    // Delete each taskTarget
+    if (taskTargetsData.taskTargets?.edges?.length > 0) {
+      for (const edge of taskTargetsData.taskTargets.edges) {
+        const deleteTaskTargetMutation = `
+          mutation DeleteTaskTarget($id: UUID!) {
+            deleteTaskTarget(id: $id) {
+              id
+            }
+          }
+        `;
+
+        await (twentyClient as any).request(deleteTaskTargetMutation, {
+          id: edge.node.id,
+        });
+        console.log('[Tasks API] Deleted taskTarget:', edge.node.id);
+      }
+    }
+
+    // Now delete the task itself
     const mutation = `
       mutation DeleteTask($taskId: UUID!) {
         deleteTask(id: $taskId) {

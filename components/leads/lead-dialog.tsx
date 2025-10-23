@@ -31,6 +31,7 @@ import { DEMO_USERS } from '@/lib/demo-users';
 import { NotesTimeline } from './notes-timeline';
 import { TasksTimeline } from './tasks-timeline';
 import { LeadInfoView } from './lead-info-view';
+import { FilesView } from './files-view';
 
 // Form validation schema - relaxed for leads from Twenty CRM
 const leadFormSchema = z.object({
@@ -509,10 +510,11 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
         {/* Use tabs only in edit mode to show lead details and notes */}
         {mode === 'edit' && lead ? (
           <Tabs defaultValue="info" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="info">Info</TabsTrigger>
               <TabsTrigger value="notes">Notes</TabsTrigger>
               <TabsTrigger value="tasks">Tasks</TabsTrigger>
+              <TabsTrigger value="files">Files</TabsTrigger>
             </TabsList>
 
             {/* Info Tab - Fetches live data from Twenty CRM */}
@@ -553,6 +555,18 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <p>Tasks are only available for leads synced with Twenty CRM.</p>
+                  <p className="text-sm mt-2">This lead does not have a Twenty CRM ID.</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Files Tab */}
+            <TabsContent value="files" className="mt-4">
+              {lead.twentyId ? (
+                <FilesView leadId={lead.twentyId} leadName={lead.name} />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Files are only available for leads synced with Twenty CRM.</p>
                   <p className="text-sm mt-2">This lead does not have a Twenty CRM ID.</p>
                 </div>
               )}

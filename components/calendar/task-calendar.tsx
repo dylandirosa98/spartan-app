@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Calendar as CalendarIcon, Clock, User, MapPin } from 'lucide-react';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
@@ -69,6 +70,7 @@ export function TaskCalendar() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [view, setView] = useState<View>('month');
   const [date, setDate] = useState(new Date());
+  const [agendaLength, setAgendaLength] = useState<number>(7); // 7 days for week view
 
   // Fetch all tasks
   const fetchTasks = async () => {
@@ -102,22 +104,72 @@ export function TaskCalendar() {
     fetchTasks();
   }, [companyId]);
 
-  // Transform tasks to calendar events
+  // Transform tasks to calendar events - Convert UTC to Eastern Time
   const events: CalendarEvent[] = useMemo(() => {
-    return tasks
+    const parsedEvents = tasks
       .filter(task => task.dueAt) // Only show tasks with due dates
       .map(task => {
-        const startDate = new Date(task.dueAt!);
-        const endDate = addHours(startDate, 1); // Make each task 1 hour long
+        try {
+          // Parse the UTC time from Twenty CRM
+          const dateStr = task.dueAt!;
+          const parts = dateStr.slice(0, 16); // Get "2024-01-15T14:30"
 
-        return {
-          id: task.id,
-          title: `${task.leadName ? `[${task.leadName}] ` : ''}${task.title}`,
-          start: startDate,
-          end: endDate,
-          resource: task,
-        };
+          // Handle various date formats
+          let startDate: Date;
+          if (parts.includes('T')) {
+            const [datePart, timePart] = parts.split('T');
+            const [year, month, day] = datePart.split('-');
+            const [hour, minute] = (timePart || '00:00').split(':');
+
+            // Create UTC date
+            const utcDate = new Date(
+              parseInt(year),
+              parseInt(month) - 1,
+              parseInt(day),
+              parseInt(hour || '0'),
+              parseInt(minute || '0')
+            );
+
+            // Subtract 4 hours to convert UTC to EDT
+            startDate = new Date(utcDate.getTime() - (4 * 60 * 60 * 1000));
+          } else {
+            // Fallback: try to parse as-is
+            startDate = new Date(dateStr);
+          }
+
+          // Validate the date
+          if (isNaN(startDate.getTime())) {
+            console.warn('[Task Calendar] Invalid date for task:', task.title, task.dueAt);
+            // Create a default date so the task still appears
+            startDate = new Date();
+          }
+
+          const endDate = addHours(startDate, 1); // Make each task 1 hour long
+
+          const event = {
+            id: task.id,
+            title: `${task.leadName ? `[${task.leadName}] ` : ''}${task.title}`,
+            start: startDate,
+            end: endDate,
+            resource: task,
+          };
+
+          return event;
+        } catch (error) {
+          console.error('[Task Calendar] Error parsing task date:', task.title, task.dueAt, error);
+          // Return event with current date as fallback
+          const now = new Date();
+          return {
+            id: task.id,
+            title: `${task.leadName ? `[${task.leadName}] ` : ''}${task.title}`,
+            start: now,
+            end: addHours(now, 1),
+            resource: task,
+          };
+        }
       });
+
+    return parsedEvents;
   }, [tasks]);
 
   // Custom event style based on status
@@ -197,16 +249,49 @@ export function TaskCalendar() {
           </p>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex gap-2 flex-wrap">
-            <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-              To Do
-            </Badge>
-            <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-              In Progress
-            </Badge>
-            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-              Done
-            </Badge>
+          <div className="mb-4 flex gap-2 flex-wrap items-center justify-between">
+            <div className="flex gap-2 flex-wrap">
+              <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+                To Do
+              </Badge>
+              <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+                In Progress
+              </Badge>
+              <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                Done
+              </Badge>
+            </div>
+
+            {/* Agenda View Controls */}
+            {view === 'agenda' && (
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-gray-600">Agenda view:</span>
+                <Button
+                  size="sm"
+                  variant={agendaLength === 1 ? 'default' : 'outline'}
+                  onClick={() => setAgendaLength(1)}
+                  className={agendaLength === 1 ? 'bg-[#C41E3A] hover:bg-[#A01828]' : ''}
+                >
+                  Day
+                </Button>
+                <Button
+                  size="sm"
+                  variant={agendaLength === 7 ? 'default' : 'outline'}
+                  onClick={() => setAgendaLength(7)}
+                  className={agendaLength === 7 ? 'bg-[#C41E3A] hover:bg-[#A01828]' : ''}
+                >
+                  Week
+                </Button>
+                <Button
+                  size="sm"
+                  variant={agendaLength === 30 ? 'default' : 'outline'}
+                  onClick={() => setAgendaLength(30)}
+                  className={agendaLength === 30 ? 'bg-[#C41E3A] hover:bg-[#A01828]' : ''}
+                >
+                  Month
+                </Button>
+              </div>
+            )}
           </div>
 
           <div style={{ height: '600px' }}>
@@ -219,11 +304,33 @@ export function TaskCalendar() {
               onSelectEvent={(event) => setSelectedEvent(event)}
               eventPropGetter={eventStyleGetter}
               view={view}
-              onView={setView}
+              onView={(newView) => {
+                setView(newView);
+                // Reset agenda length when switching to agenda view
+                if (newView === 'agenda') {
+                  setAgendaLength(7);
+                }
+              }}
               date={date}
               onNavigate={setDate}
               popup
               views={['month', 'week', 'day', 'agenda']}
+              min={new Date(2024, 0, 1, 6, 0, 0)} // 6 AM
+              max={new Date(2024, 0, 1, 21, 0, 0)} // 9 PM
+              length={view === 'agenda' ? agendaLength : undefined}
+              components={{
+                agenda: {
+                  date: ({ day }: { day: Date }) => {
+                    return <span>{format(day, 'EEE MMM d, yyyy')}</span>;
+                  },
+                  time: ({ event }: { event: CalendarEvent }) => {
+                    return <span>{format(event.start, 'h:mm a')}</span>;
+                  },
+                  event: ({ event }: { event: CalendarEvent }) => {
+                    return <span>{event.title}</span>;
+                  },
+                },
+              }}
             />
           </div>
         </CardContent>

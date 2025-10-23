@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -40,44 +41,41 @@ import {
 } from '@/components/ui/table';
 import {
   UserPlus,
-  Edit,
-  Trash2,
   RefreshCw,
   Smartphone,
   CheckCircle2,
-  XCircle,
   Eye,
   EyeOff,
+  UserCheck,
 } from 'lucide-react';
 
 interface MobileUser {
   id: string;
   username: string;
   email: string;
-  role: 'admin' | 'manager' | 'sales_rep';
-  workspaceId: string;
+  salesRep: string;
+  companyId: string;
+  role: string;
   createdAt: string;
-  updatedAt: string;
-  isActive: boolean;
 }
 
 interface UserFormData {
   username: string;
   password: string;
   email: string;
-  role: 'admin' | 'manager' | 'sales_rep';
-  workspaceId: string;
-  twentyApiKey: string;
+  salesRep: string;
 }
 
 export default function MobileUsersPage() {
+  const params = useParams();
+  const companyId = params.company_id as string;
   const { toast } = useToast();
+
   const [users, setUsers] = useState<MobileUser[]>([]);
+  const [salesReps, setSalesReps] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingSalesReps, setIsFetchingSalesReps] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<MobileUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -85,28 +83,50 @@ export default function MobileUsersPage() {
     username: '',
     password: '',
     email: '',
-    role: 'sales_rep',
-    workspaceId: 'default',
-    twentyApiKey: '',
+    salesRep: '',
   });
 
-  // Load users
-  const fetchUsers = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch('/api/mobile-users');
-      const data = await response.json();
+  // Fetch sales reps from Twenty CRM
+  const fetchSalesReps = async () => {
+    if (!companyId) return;
 
-      if (response.ok) {
-        setUsers(data.users);
-      } else {
-        throw new Error(data.error || 'Failed to fetch users');
+    try {
+      setIsFetchingSalesReps(true);
+      const response = await fetch(`/api/sales-reps?companyId=${companyId}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch sales reps');
       }
+
+      const data = await response.json();
+      setSalesReps(data.salesReps || []);
+      console.log('[Mobile Users] Fetched sales reps:', data.salesReps);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('[Mobile Users] Error fetching sales reps:', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to load users',
+        description: 'Failed to load sales rep options from Twenty CRM',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsFetchingSalesReps(false);
+    }
+  };
+
+  // Load users (currently no GET endpoint - would need to create one)
+  const fetchUsers = async () => {
+    if (!companyId) return;
+
+    try {
+      setIsLoading(true);
+      // TODO: Create GET endpoint to list mobile users
+      // For now, just show empty state
+      setUsers([]);
+    } catch (error) {
+      console.error('[Mobile Users] Error fetching users:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load users',
         variant: 'destructive',
       });
     } finally {
@@ -115,14 +135,17 @@ export default function MobileUsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (companyId) {
+      fetchSalesReps();
+      fetchUsers();
+    }
+  }, [companyId]);
 
   // Handle create user
   const handleCreateUser = async () => {
     try {
       // Validation
-      if (!formData.username || !formData.password || !formData.email || !formData.role) {
+      if (!formData.username || !formData.password || !formData.email || !formData.salesRep) {
         toast({
           title: 'Validation Error',
           description: 'Please fill in all required fields',
@@ -131,63 +154,34 @@ export default function MobileUsersPage() {
         return;
       }
 
+      // Email validation
+      if (!formData.email.includes('@')) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please enter a valid email address',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Password validation
+      if (formData.password.length < 8) {
+        toast({
+          title: 'Validation Error',
+          description: 'Password must be at least 8 characters',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       setIsSaving(true);
 
-      const response = await fetch('/api/mobile-users', {
+      const response = await fetch('/api/mobile-users/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: 'Success',
-          description: `User "${formData.username}" created successfully`,
-        });
-
-        // Reset form and close dialog
-        setFormData({
-          username: '',
-          password: '',
-          email: '',
-          role: 'sales_rep',
-          workspaceId: 'default',
-          twentyApiKey: '',
-        });
-        setShowCreateDialog(false);
-
-        // Reload users
-        fetchUsers();
-      } else {
-        throw new Error(data.error || 'Failed to create user');
-      }
-    } catch (error) {
-      console.error('Error creating user:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create user',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Handle update user
-  const handleUpdateUser = async () => {
-    if (!selectedUser) return;
-
-    try {
-      setIsSaving(true);
-
-      const response = await fetch('/api/mobile-users', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: selectedUser.id,
           ...formData,
+          companyId: companyId,
         }),
       });
 
@@ -196,99 +190,32 @@ export default function MobileUsersPage() {
       if (response.ok) {
         toast({
           title: 'Success',
-          description: `User "${formData.username}" updated successfully`,
+          description: `User "${formData.username}" created successfully for sales rep "${formData.salesRep}"`,
         });
 
-        setShowEditDialog(false);
-        setSelectedUser(null);
+        // Reset form and close dialog
+        setFormData({
+          username: '',
+          password: '',
+          email: '',
+          salesRep: '',
+        });
+        setShowCreateDialog(false);
 
         // Reload users
         fetchUsers();
       } else {
-        throw new Error(data.error || 'Failed to update user');
+        throw new Error(data.error || data.message || 'Failed to create user');
       }
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error('[Mobile Users] Error creating user:', error);
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to update user',
+        description: error instanceof Error ? error.message : 'Failed to create user',
         variant: 'destructive',
       });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  // Handle delete user
-  const handleDeleteUser = async () => {
-    if (!selectedUser) return;
-
-    try {
-      setIsSaving(true);
-
-      const response = await fetch(`/api/mobile-users?id=${selectedUser.id}`, {
-        method: 'DELETE',
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: 'Success',
-          description: `User "${selectedUser.username}" deleted successfully`,
-        });
-
-        setShowDeleteDialog(false);
-        setSelectedUser(null);
-
-        // Reload users
-        fetchUsers();
-      } else {
-        throw new Error(data.error || 'Failed to delete user');
-      }
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete user',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Open edit dialog
-  const openEditDialog = (user: MobileUser) => {
-    setSelectedUser(user);
-    setFormData({
-      username: user.username,
-      password: '', // Don't pre-fill password for security
-      email: user.email,
-      role: user.role,
-      workspaceId: user.workspaceId,
-      twentyApiKey: '',
-    });
-    setShowEditDialog(true);
-  };
-
-  // Open delete dialog
-  const openDeleteDialog = (user: MobileUser) => {
-    setSelectedUser(user);
-    setShowDeleteDialog(true);
-  };
-
-  // Get role badge color
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-purple-600 hover:bg-purple-700';
-      case 'manager':
-        return 'bg-blue-600 hover:bg-blue-700';
-      case 'sales_rep':
-        return 'bg-green-600 hover:bg-green-700';
-      default:
-        return 'bg-gray-600 hover:bg-gray-700';
     }
   };
 
@@ -303,21 +230,32 @@ export default function MobileUsersPage() {
               Mobile App Users
             </h1>
             <p className="text-gray-600 mt-1">
-              Manage user accounts for the Spartan CRM mobile application
+              Create mobile app accounts for your sales reps. Each account is linked to a sales rep from Twenty CRM.
             </p>
           </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={fetchUsers}
-              disabled={isLoading}
+              onClick={() => {
+                fetchSalesReps();
+                fetchUsers();
+              }}
+              disabled={isLoading || isFetchingSalesReps}
             >
-              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`mr-2 h-4 w-4 ${(isLoading || isFetchingSalesReps) ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
               <DialogTrigger asChild>
-                <Button className="bg-[#C41E3A] hover:bg-[#A01828]">
+                <Button
+                  className="bg-[#C41E3A] hover:bg-[#A01828]"
+                  onClick={() => {
+                    // Refresh sales reps when opening dialog
+                    if (salesReps.length === 0) {
+                      fetchSalesReps();
+                    }
+                  }}
+                >
                   <UserPlus className="mr-2 h-4 w-4" />
                   Add User
                 </Button>
@@ -326,18 +264,52 @@ export default function MobileUsersPage() {
                 <DialogHeader>
                   <DialogTitle>Create Mobile App User</DialogTitle>
                   <DialogDescription>
-                    Add a new user who can access the Spartan CRM mobile app
+                    Create an account for a sales rep. They will be able to login with their username and see only their assigned leads.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
+                    <Label htmlFor="salesRep">Sales Rep (from Twenty CRM) *</Label>
+                    <Select
+                      value={formData.salesRep}
+                      onValueChange={(value) => setFormData({ ...formData, salesRep: value })}
+                      disabled={isFetchingSalesReps}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isFetchingSalesReps ? "Loading..." : "Select sales rep"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {salesReps.length === 0 ? (
+                          <SelectItem value="no-reps" disabled>
+                            No sales reps found in Twenty CRM
+                          </SelectItem>
+                        ) : (
+                          salesReps.map((rep) => (
+                            <SelectItem key={rep} value={rep}>
+                              <div className="flex items-center gap-2">
+                                <UserCheck className="h-4 w-4" />
+                                {rep}
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      This user will only see leads assigned to this sales rep
+                    </p>
+                  </div>
+                  <div>
                     <Label htmlFor="username">Username *</Label>
                     <Input
                       id="username"
-                      placeholder="Enter username"
+                      placeholder="e.g., jimmy_mobile"
                       value={formData.username}
                       onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Used to login to the mobile app
+                    </p>
                   </div>
                   <div>
                     <Label htmlFor="password">Password *</Label>
@@ -345,7 +317,7 @@ export default function MobileUsersPage() {
                       <Input
                         id="password"
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="Enter password"
+                        placeholder="Minimum 8 characters"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       />
@@ -370,40 +342,6 @@ export default function MobileUsersPage() {
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="role">Role *</Label>
-                    <Select
-                      value={formData.role}
-                      onValueChange={(value: any) => setFormData({ ...formData, role: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="sales_rep">Sales Rep</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="workspaceId">Workspace ID</Label>
-                    <Input
-                      id="workspaceId"
-                      placeholder="default"
-                      value={formData.workspaceId}
-                      onChange={(e) => setFormData({ ...formData, workspaceId: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="twentyApiKey">Twenty CRM API Key</Label>
-                    <Input
-                      id="twentyApiKey"
-                      placeholder="Optional - uses default if empty"
-                      value={formData.twentyApiKey}
-                      onChange={(e) => setFormData({ ...formData, twentyApiKey: e.target.value })}
-                    />
-                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setShowCreateDialog(false)} disabled={isSaving}>
@@ -411,7 +349,7 @@ export default function MobileUsersPage() {
                   </Button>
                   <Button
                     onClick={handleCreateUser}
-                    disabled={isSaving}
+                    disabled={isSaving || isFetchingSalesReps || salesReps.length === 0}
                     className="bg-[#C41E3A] hover:bg-[#A01828]"
                   >
                     {isSaving ? (
@@ -429,226 +367,79 @@ export default function MobileUsersPage() {
           </div>
         </div>
 
-        {/* Users Table */}
+        {/* Info Card */}
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-blue-900">
+                  How Mobile User Accounts Work
+                </p>
+                <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                  <li>Each mobile user is linked to a sales rep from Twenty CRM</li>
+                  <li>Users login with their username (not email)</li>
+                  <li>Each user only sees leads assigned to their sales rep</li>
+                  <li>Only one account allowed per sales rep</li>
+                  <li>To add more users, first add the sales rep in Twenty CRM</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Available Sales Reps */}
         <Card>
           <CardHeader>
-            <CardTitle>User Management</CardTitle>
+            <CardTitle>Available Sales Reps</CardTitle>
             <CardDescription>
-              {isLoading ? 'Loading users...' : `${users.length} mobile app ${users.length === 1 ? 'user' : 'users'}`}
+              {isFetchingSalesReps
+                ? 'Loading sales reps from Twenty CRM...'
+                : `${salesReps.length} sales ${salesReps.length === 1 ? 'rep' : 'reps'} available`}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <RefreshCw className="h-8 w-8 animate-spin text-[#C41E3A]" />
+            {isFetchingSalesReps ? (
+              <div className="flex justify-center items-center py-8">
+                <RefreshCw className="h-6 w-6 animate-spin text-[#C41E3A]" />
               </div>
-            ) : users.length === 0 ? (
-              <div className="text-center py-12">
-                <Smartphone className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No users yet</h3>
-                <p className="text-gray-600 mb-4">Create your first mobile app user to get started</p>
-                <Button
-                  onClick={() => setShowCreateDialog(true)}
-                  className="bg-[#C41E3A] hover:bg-[#A01828]"
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Add User
-                </Button>
+            ) : salesReps.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600 mb-2">No sales reps found in Twenty CRM</p>
+                <p className="text-sm text-gray-500">
+                  Add sales rep options in Twenty CRM first, then refresh this page
+                </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Username</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Workspace</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.username}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          <Badge className={`${getRoleBadgeColor(user.role)} capitalize`}>
-                            {user.role.replace('_', ' ')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{user.workspaceId}</TableCell>
-                        <TableCell>
-                          {user.isActive ? (
-                            <Badge className="bg-green-600 hover:bg-green-700">
-                              <CheckCircle2 className="mr-1 h-3 w-3" />
-                              Active
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">
-                              <XCircle className="mr-1 h-3 w-3" />
-                              Inactive
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-gray-600">
-                          {new Date(user.createdAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openEditDialog(user)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDeleteDialog(user)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {salesReps.map((rep) => (
+                  <div
+                    key={rep}
+                    className="flex items-center gap-2 p-3 border rounded-lg bg-gray-50"
+                  >
+                    <UserCheck className="h-5 w-5 text-[#C41E3A]" />
+                    <span className="font-medium">{rep}</span>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Edit User Dialog */}
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-              <DialogDescription>
-                Update user information and credentials
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-username">Username</Label>
-                <Input
-                  id="edit-username"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-password">New Password (leave empty to keep current)</Label>
-                <div className="relative">
-                  <Input
-                    id="edit-password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter new password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="edit-email">Email</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-role">Role</Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(value: any) => setFormData({ ...formData, role: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="sales_rep">Sales Rep</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="edit-workspaceId">Workspace ID</Label>
-                <Input
-                  id="edit-workspaceId"
-                  value={formData.workspaceId}
-                  onChange={(e) => setFormData({ ...formData, workspaceId: e.target.value })}
-                />
-              </div>
+        {/* Users List - TODO: Implement GET endpoint */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Registered Users</CardTitle>
+            <CardDescription>
+              Mobile app user accounts (listing coming soon)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 text-gray-500">
+              User listing feature coming soon
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={isSaving}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleUpdateUser}
-                disabled={isSaving}
-                className="bg-[#C41E3A] hover:bg-[#A01828]"
-              >
-                {isSaving ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Confirmation Dialog */}
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete User</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete the user "{selectedUser?.username}"? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isSaving}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteUser}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete User'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

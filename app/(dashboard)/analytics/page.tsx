@@ -146,10 +146,12 @@ export default function AnalyticsPage() {
     }
 
     leads.forEach((lead) => {
-      const leadDate = new Date(lead.createdAt);
-      const key = leadDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      if (monthlyData.hasOwnProperty(key)) {
-        monthlyData[key] += 1;
+      if (lead.createdAt) {
+        const leadDate = new Date(lead.createdAt);
+        const key = leadDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        if (monthlyData.hasOwnProperty(key)) {
+          monthlyData[key] += 1;
+        }
       }
     });
 
@@ -174,10 +176,12 @@ export default function AnalyticsPage() {
     leads
       .filter((lead) => lead.status === 'won' && lead.estimatedValue)
       .forEach((lead) => {
-        const leadDate = new Date(lead.createdAt);
-        const key = leadDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        if (monthlyRevenue.hasOwnProperty(key)) {
-          monthlyRevenue[key] += lead.estimatedValue || 0;
+        if (lead.createdAt) {
+          const leadDate = new Date(lead.createdAt);
+          const key = leadDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          if (monthlyRevenue.hasOwnProperty(key)) {
+            monthlyRevenue[key] += lead.estimatedValue || 0;
+          }
         }
       });
 

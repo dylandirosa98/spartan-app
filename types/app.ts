@@ -157,6 +157,9 @@ export interface User {
   avatar?: string;
   createdAt: string;
   lastLoginAt?: string;
+  company_id?: string; // For company users
+  salesRep?: string; // For mobile app users - links to Twenty CRM sales rep
+  username?: string; // For mobile app users
 }
 
 /**

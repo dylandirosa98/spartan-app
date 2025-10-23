@@ -2,16 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/db/supabase';
 import { createTwentyClient } from '@/lib/api/twenty-crm';
 import { decrypt } from '@/lib/api/encryption';
+import { TwentyCRMClient } from '@/lib/api/twenty-crm';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseClient = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 /**
  * GET /api/leads
- * Fetch leads for a specific company
- * Query params: company_id (required)
+ * Fetch leads for a specific company from Twenty CRM
+ * Query params:
+ *   - company_id (required)
+ *   - salesRep (optional) - filter leads by sales rep
  */
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const companyId = url.searchParams.get('company_id');
+    const salesRepFilter = url.searchParams.get('salesRep');
 
     if (!companyId) {
       return NextResponse.json(
@@ -20,32 +30,177 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch leads from Supabase
-    const { data: leads, error } = await supabase
-      .from('leads')
-      .select('*')
-      .eq('company_id', companyId)
-      .order('created_at', { ascending: false });
+    // Get company configuration to access Twenty CRM
+    const { data: company, error: companyError } = await supabaseClient
+      .from('companies')
+      .select('twenty_api_url, twenty_api_key')
+      .eq('id', companyId)
+      .single();
 
-    if (error) {
-      console.error('[Leads API] Supabase error:', error);
+    if (companyError || !company) {
+      console.error('[Leads API] Company fetch error:', companyError);
       return NextResponse.json(
-        { error: 'Failed to fetch leads', details: error.message },
-        { status: 500 }
+        { error: 'Company not found' },
+        { status: 404 }
       );
     }
 
-    // Transform to match frontend Lead interface
-    const transformedLeads = (leads || []).map((lead: any) => ({
-      ...lead,
-      twentyId: lead.twenty_id,
-      zipCode: lead.zip_code,
-      assignedTo: lead.assigned_to,
-      createdAt: lead.created_at,
-      updatedAt: lead.updated_at,
-      source: lead.source || 'twenty_crm',
-      medium: 'organic', // Default medium
-    }));
+    // Decrypt API key
+    const decryptedApiKey = decrypt(company.twenty_api_key);
+
+    // Create Twenty CRM client
+    const twentyClient = new TwentyCRMClient(
+      company.twenty_api_url,
+      decryptedApiKey
+    );
+
+    // Fetch leads from Twenty CRM (with optional salesRep filter)
+    const query = salesRepFilter
+      ? `
+        query GetLeadsBySalesRep($salesRep: LeadSalesRepEnum!) {
+          leads(filter: { salesRep: { eq: $salesRep } }) {
+            edges {
+              node {
+                id
+                name
+                email {
+                  primaryEmail
+                  additionalEmails
+                }
+                phone {
+                  primaryPhoneNumber
+                  additionalPhones
+                }
+                city
+                adress
+                zipCode
+                status
+                source
+                medium
+                salesRep
+                estValue {
+                  amountMicros
+                  currencyCode
+                }
+                notes
+                aiSummary
+                appointmentTime
+                rawUtmSource
+                utmMedium
+                utmCampaign
+                utmContent
+                utmTerm
+                gclid
+                fbclid
+                wbraid
+                callPage {
+                  primaryLinkUrl
+                  primaryLinkLabel
+                  secondaryLinks
+                }
+                createdAt
+                updatedAt
+                deletedAt
+                createdBy {
+                  source
+                  workspaceMemberId
+                  name
+                }
+                position
+              }
+            }
+          }
+        }
+      `
+      : `
+        query GetAllLeads {
+          leads {
+            edges {
+              node {
+                id
+                name
+                email {
+                  primaryEmail
+                  additionalEmails
+                }
+                phone {
+                  primaryPhoneNumber
+                  additionalPhones
+                }
+                city
+                adress
+                zipCode
+                status
+                source
+                medium
+                salesRep
+                estValue {
+                  amountMicros
+                  currencyCode
+                }
+                notes
+                aiSummary
+                appointmentTime
+                rawUtmSource
+                utmMedium
+                utmCampaign
+                utmContent
+                utmTerm
+                gclid
+                fbclid
+                wbraid
+                callPage {
+                  primaryLinkUrl
+                  primaryLinkLabel
+                  secondaryLinks
+                }
+                createdAt
+                updatedAt
+                deletedAt
+                createdBy {
+                  source
+                  workspaceMemberId
+                  name
+                }
+                position
+              }
+            }
+          }
+        }
+      `;
+
+    const variables = salesRepFilter ? { salesRep: salesRepFilter } : {};
+    const data = await (twentyClient as any).request(query, variables);
+
+    console.log(
+      '[Leads API] Fetched leads:',
+      data.leads?.edges?.length || 0,
+      salesRepFilter ? `(filtered by salesRep: ${salesRepFilter})` : '(all leads)'
+    );
+
+    // Transform Twenty CRM leads to match frontend Lead interface
+    const transformedLeads = (data.leads?.edges || []).map((edge: any) => {
+      const lead = edge.node;
+      return {
+        id: lead.id,
+        twentyId: lead.id,
+        name: lead.name,
+        email: lead.email?.primaryEmail || null,
+        phone: lead.phone?.primaryPhoneNumber || null,
+        address: lead.adress || null,
+        city: lead.city || null,
+        state: null, // Not in Twenty CRM schema
+        zipCode: lead.zipCode || null,
+        status: lead.status || null,
+        source: lead.source || 'twenty_crm',
+        medium: lead.medium || null,
+        notes: lead.notes || null,
+        assignedTo: lead.salesRep || null,
+        createdAt: lead.createdAt,
+        updatedAt: lead.updatedAt,
+        company_id: companyId,
+      };
+    });
 
     return NextResponse.json({ leads: transformedLeads });
 
@@ -112,7 +267,7 @@ export async function POST(request: NextRequest) {
       assignedTo: data.assigned_to,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
-      medium: 'organic',
+      medium: data.medium || null,
     };
 
     return NextResponse.json({ lead: transformedLead }, { status: 201 });
@@ -228,7 +383,7 @@ export async function PATCH(request: NextRequest) {
       assignedTo: data.assigned_to,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
-      medium: 'organic',
+      medium: data.medium || null,
     };
 
     return NextResponse.json({ lead: transformedLead });

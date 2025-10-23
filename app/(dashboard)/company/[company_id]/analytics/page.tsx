@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,12 +44,33 @@ const CHART_COLORS = {
 };
 
 const SOURCE_COLORS: Record<string, string> = {
+  GOOGLE_ADS: CHART_COLORS.primary,
+  GOOGLE_LSA: CHART_COLORS.secondary,
+  FACEBOOK_ADS: CHART_COLORS.accent,
+  CANVASS: CHART_COLORS.tertiary,
+  REFERRAL: CHART_COLORS.success,
+  WEBSITE: CHART_COLORS.warning,
   google_ads: CHART_COLORS.primary,
   google_lsa: CHART_COLORS.secondary,
   facebook_ads: CHART_COLORS.accent,
   canvass: CHART_COLORS.tertiary,
   referral: CHART_COLORS.success,
   website: CHART_COLORS.warning,
+};
+
+const MEDIUM_COLORS: Record<string, string> = {
+  CPC: '#E6546A',
+  LSAS: '#F1A3AF',
+  SOCIAL_ADS: '#9A1730',
+  CANVASS: '#731126',
+  REFERRAL: '#10B981',
+  ORGANIC: '#F59E0B',
+  cpc: '#E6546A',
+  lsas: '#F1A3AF',
+  social_ads: '#9A1730',
+  canvass: '#731126',
+  referral: '#10B981',
+  organic: '#F59E0B',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -61,13 +83,20 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function AnalyticsPage() {
+  const params = useParams();
+  const companyId = params.company_id as string;
   const { leads, isLoading, fetchLeads } = useLeadStore();
+
   const [mounted, setMounted] = useState(false);
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
-    fetchLeads();
-  }, [fetchLeads]);
+    // Leads are already fetched by the lead store, no need to fetch again
+    if (leads.length === 0 && !isLoading) {
+      fetchLeads();
+    }
+  }, [companyId, leads.length, isLoading, fetchLeads]);
 
   // Calculate key metrics
   const metrics = useMemo(() => {
@@ -95,20 +124,44 @@ export default function AnalyticsPage() {
     };
   }, [leads]);
 
-  // Lead source breakdown data
+  // Lead source breakdown data with medium drill-down
   const sourceData = useMemo(() => {
-    const sourceCount: Record<string, number> = {};
+    if (selectedSource) {
+      // Show medium breakdown for selected source
+      const mediumCount: Record<string, number> = {};
 
-    leads.forEach((lead) => {
-      sourceCount[lead.source] = (sourceCount[lead.source] || 0) + 1;
-    });
+      leads
+        .filter(lead => lead.source === selectedSource ||
+          lead.source?.toLowerCase() === selectedSource.toLowerCase())
+        .forEach((lead) => {
+          const medium = lead.medium || 'unknown';
+          mediumCount[medium] = (mediumCount[medium] || 0) + 1;
+        });
 
-    return Object.entries(sourceCount).map(([name, value]) => ({
-      name: name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-      value,
-      color: SOURCE_COLORS[name] || CHART_COLORS.primary,
-    }));
-  }, [leads]);
+      return Object.entries(mediumCount).map(([name, value]) => ({
+        name: name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        value,
+        color: MEDIUM_COLORS[name] || MEDIUM_COLORS[name.toUpperCase()] || CHART_COLORS.accent,
+        isMedium: true,
+      }));
+    } else {
+      // Show source breakdown
+      const sourceCount: Record<string, number> = {};
+
+      leads.forEach((lead) => {
+        const source = lead.source || 'unknown';
+        sourceCount[source] = (sourceCount[source] || 0) + 1;
+      });
+
+      return Object.entries(sourceCount).map(([name, value]) => ({
+        name: name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        value,
+        color: SOURCE_COLORS[name] || SOURCE_COLORS[name.toUpperCase()] || CHART_COLORS.primary,
+        rawName: name,
+        isMedium: false,
+      }));
+    }
+  }, [leads, selectedSource]);
 
   // Lead status funnel data
   const statusData = useMemo(() => {
@@ -132,7 +185,7 @@ export default function AnalyticsPage() {
     }));
   }, [leads]);
 
-  // Leads over time data (last 6 months)
+  // Leads over time data (last 6 months) - using Twenty CRM createdAt
   const leadsOverTimeData = useMemo(() => {
     const monthlyData: Record<string, number> = {};
     const now = new Date();
@@ -145,10 +198,13 @@ export default function AnalyticsPage() {
     }
 
     leads.forEach((lead) => {
-      const leadDate = new Date(lead.createdAt);
-      const key = leadDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      if (monthlyData.hasOwnProperty(key)) {
-        monthlyData[key] += 1;
+      // Use createdAt from Twenty CRM (this is when they were added to Twenty)
+      if (lead.createdAt) {
+        const leadDate = new Date(lead.createdAt);
+        const key = leadDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        if (monthlyData.hasOwnProperty(key)) {
+          monthlyData[key] += 1;
+        }
       }
     });
 
@@ -158,7 +214,7 @@ export default function AnalyticsPage() {
     }));
   }, [leads]);
 
-  // Revenue by month data
+  // Revenue by month data - using Twenty CRM createdAt
   const revenueByMonthData = useMemo(() => {
     const monthlyRevenue: Record<string, number> = {};
     const now = new Date();
@@ -173,10 +229,13 @@ export default function AnalyticsPage() {
     leads
       .filter((lead) => lead.status === 'won' && lead.estimatedValue)
       .forEach((lead) => {
-        const leadDate = new Date(lead.createdAt);
-        const key = leadDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        if (monthlyRevenue.hasOwnProperty(key)) {
-          monthlyRevenue[key] += lead.estimatedValue || 0;
+        // Use createdAt from Twenty CRM
+        if (lead.createdAt) {
+          const leadDate = new Date(lead.createdAt);
+          const key = leadDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          if (monthlyRevenue.hasOwnProperty(key)) {
+            monthlyRevenue[key] += lead.estimatedValue || 0;
+          }
         }
       });
 
@@ -302,10 +361,29 @@ export default function AnalyticsPage() {
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Lead Source Breakdown - Pie Chart */}
+          {/* Lead Source Breakdown - Pie Chart with Medium Drill-down */}
           <Card>
             <CardHeader>
-              <CardTitle>Lead Source Breakdown</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>
+                  {selectedSource
+                    ? `Medium Breakdown - ${selectedSource.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}`
+                    : 'Lead Source Breakdown'}
+                </CardTitle>
+                {selectedSource && (
+                  <button
+                    onClick={() => setSelectedSource(null)}
+                    className="text-sm text-[#C41E3A] hover:underline"
+                  >
+                    ← Back to Sources
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {selectedSource
+                  ? 'Click the back button to return to source view'
+                  : 'Click on a source to see medium breakdown'}
+              </p>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -324,6 +402,12 @@ export default function AnalyticsPage() {
                       outerRadius={80}
                       fill={SPARTAN_RED}
                       dataKey="value"
+                      onClick={(data) => {
+                        if (!selectedSource && !data.isMedium) {
+                          setSelectedSource(data.rawName);
+                        }
+                      }}
+                      style={{ cursor: selectedSource ? 'default' : 'pointer' }}
                     >
                       {sourceData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />

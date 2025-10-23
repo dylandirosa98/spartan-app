@@ -103,6 +103,35 @@ export function TasksTimeline({ leadId, leadName }: TasksTimelineProps) {
 
     setIsCreating(true);
     try {
+      // Add 4 hours before sending to Twenty CRM
+      // This compensates for Twenty's timezone handling
+      let dueAtValue = null;
+      if (newTaskDueAt) {
+        const [datePart, timePart] = newTaskDueAt.split('T');
+        const [year, month, day] = datePart.split('-');
+        const [hour, minute] = timePart.split(':');
+
+        const userDate = new Date(
+          parseInt(year),
+          parseInt(month) - 1,
+          parseInt(day),
+          parseInt(hour),
+          parseInt(minute)
+        );
+
+        // Add 4 hours
+        const adjustedDate = new Date(userDate.getTime() + (4 * 60 * 60 * 1000));
+
+        // Format as "YYYY-MM-DDTHH:mm:ss"
+        const yearStr = adjustedDate.getFullYear();
+        const monthStr = String(adjustedDate.getMonth() + 1).padStart(2, '0');
+        const dayStr = String(adjustedDate.getDate()).padStart(2, '0');
+        const hourStr = String(adjustedDate.getHours()).padStart(2, '0');
+        const minuteStr = String(adjustedDate.getMinutes()).padStart(2, '0');
+
+        dueAtValue = `${yearStr}-${monthStr}-${dayStr}T${hourStr}:${minuteStr}:00`;
+      }
+
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: {
@@ -114,7 +143,7 @@ export function TasksTimeline({ leadId, leadName }: TasksTimelineProps) {
           title: newTaskTitle.trim(),
           body: newTaskBody.trim() || null,
           status: newTaskStatus,
-          dueAt: newTaskDueAt || null,
+          dueAt: dueAtValue,
         }),
       });
 
@@ -151,11 +180,44 @@ export function TasksTimeline({ leadId, leadName }: TasksTimelineProps) {
   // Start editing a task
   const startEditing = (task: Task) => {
     setEditingTaskId(task.id);
+
+    // Convert UTC time from Twenty CRM back to Eastern Time for display
+    let dueAtLocal = '';
+    if (task.dueAt) {
+      // Parse the UTC time stored in Twenty CRM
+      const dateStr = task.dueAt;
+      const parts = dateStr.slice(0, 16); // Get "2024-01-15T14:30"
+      const [datePart, timePart] = parts.split('T');
+      const [year, month, day] = datePart.split('-');
+      const [hour, minute] = timePart.split(':');
+
+      // Create date from UTC time
+      const utcDate = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute)
+      );
+
+      // Subtract 4 hours to convert UTC to EDT
+      const etDate = new Date(utcDate.getTime() - (4 * 60 * 60 * 1000));
+
+      // Format for datetime-local input
+      const yearStr = etDate.getFullYear();
+      const monthStr = String(etDate.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(etDate.getDate()).padStart(2, '0');
+      const hourStr = String(etDate.getHours()).padStart(2, '0');
+      const minuteStr = String(etDate.getMinutes()).padStart(2, '0');
+
+      dueAtLocal = `${yearStr}-${monthStr}-${dayStr}T${hourStr}:${minuteStr}`;
+    }
+
     setEditingValues({
       title: task.title,
       body: task.body || '',
       status: task.status || 'TODO',
-      dueAt: task.dueAt ? new Date(task.dueAt).toISOString().slice(0, 16) : '',
+      dueAt: dueAtLocal,
     });
   };
 
@@ -176,7 +238,30 @@ export function TasksTimeline({ leadId, leadName }: TasksTimelineProps) {
       };
 
       if (editingValues.dueAt) {
-        updates.dueAt = new Date(editingValues.dueAt).toISOString();
+        // Add 4 hours before sending to Twenty CRM
+        const [datePart, timePart] = editingValues.dueAt.split('T');
+        const [year, month, day] = datePart.split('-');
+        const [hour, minute] = timePart.split(':');
+
+        const userDate = new Date(
+          parseInt(year),
+          parseInt(month) - 1,
+          parseInt(day),
+          parseInt(hour),
+          parseInt(minute)
+        );
+
+        // Add 4 hours
+        const adjustedDate = new Date(userDate.getTime() + (4 * 60 * 60 * 1000));
+
+        // Format as "YYYY-MM-DDTHH:mm:ss"
+        const yearStr = adjustedDate.getFullYear();
+        const monthStr = String(adjustedDate.getMonth() + 1).padStart(2, '0');
+        const dayStr = String(adjustedDate.getDate()).padStart(2, '0');
+        const hourStr = String(adjustedDate.getHours()).padStart(2, '0');
+        const minuteStr = String(adjustedDate.getMinutes()).padStart(2, '0');
+
+        updates.dueAt = `${yearStr}-${monthStr}-${dayStr}T${hourStr}:${minuteStr}:00`;
       }
 
       // Note: Twenty CRM doesn't have a completedAt field for tasks
@@ -255,10 +340,28 @@ export function TasksTimeline({ leadId, leadName }: TasksTimelineProps) {
     }
   };
 
-  // Format due date
+  // Format due date - Convert UTC to Eastern Time for display
   const formatDueDate = (dateString: string) => {
     try {
-      return format(new Date(dateString), 'MMM d, yyyy h:mm a');
+      // Parse the UTC time from Twenty CRM
+      const parts = dateString.slice(0, 16); // Get "2024-01-15T14:30"
+      const [datePart, timePart] = parts.split('T');
+      const [year, month, day] = datePart.split('-');
+      const [hour, minute] = timePart.split(':');
+
+      // Create UTC date
+      const utcDate = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute)
+      );
+
+      // Subtract 4 hours to convert UTC to EDT
+      const etDate = new Date(utcDate.getTime() - (4 * 60 * 60 * 1000));
+
+      return format(etDate, 'MMM d, yyyy h:mm a') + ' ET';
     } catch {
       return 'Invalid date';
     }

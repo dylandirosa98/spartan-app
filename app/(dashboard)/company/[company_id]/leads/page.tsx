@@ -52,6 +52,7 @@ export default function LeadsPage() {
     setSearchQuery,
     getFilteredLeads,
     setCompanyId,
+    setSalesRepFilter,
   } = useLeadStore();
 
   const { currentUser } = useAuthStore();
@@ -61,20 +62,51 @@ export default function LeadsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
+  const [statusEnums, setStatusEnums] = useState<Array<{ value: string; label: string }>>([]);
 
-  // Set company ID from URL and fetch leads on mount
+  // Fetch status enums from Twenty CRM
+  useEffect(() => {
+    const fetchEnums = async () => {
+      if (!companyId) return;
+
+      try {
+        const response = await fetch(`/api/leads/enums?companyId=${companyId}`);
+        if (response.ok) {
+          const { enums } = await response.json();
+          setStatusEnums(enums.status || []);
+        }
+      } catch (error) {
+        console.error('[Leads Page] Error fetching enums:', error);
+      }
+    };
+
+    fetchEnums();
+  }, [companyId]);
+
+  // Set company ID from URL, set sales rep filter for mobile users, and fetch leads
   useEffect(() => {
     if (companyId) {
       console.log('[Leads Page] Setting company ID from URL:', companyId);
       setCompanyId(companyId);
-      fetchLeads();
-    }
-  }, [companyId, setCompanyId, fetchLeads]);
 
-  // Get filtered leads with role-based filtering
+      // If user is a mobile user with salesRep, set the filter
+      if (currentUser?.salesRep) {
+        console.log('[Leads Page] Mobile user detected, filtering by sales rep:', currentUser.salesRep);
+        setSalesRepFilter(currentUser.salesRep);
+        fetchLeads(currentUser.salesRep);
+      } else {
+        // Regular user - clear sales rep filter and fetch all leads
+        setSalesRepFilter(null);
+        fetchLeads();
+      }
+    }
+  }, [companyId, currentUser?.salesRep, setCompanyId, setSalesRepFilter, fetchLeads]);
+
+  // Get filtered leads with role-based filtering and sorting
   const filteredLeads = useMemo(() => {
     console.log('Total leads in store:', leads.length);
     console.log('All leads:', leads);
+    console.log('Lead statuses:', leads.map(l => ({ name: l.name, status: l.status, stage: l.stage, allFields: l })));
     console.log('Current filters:', filters);
     console.log('Search query:', searchQuery);
 
@@ -91,9 +123,36 @@ export default function LeadsPage() {
     }
     // Owners and managers see all leads
 
-    console.log('Final filtered leads:', baseFilteredLeads.length);
+    // Sort by status - use dynamic status order from enums if available
+    const statusOrder: Record<string, number> = {};
+    if (statusEnums.length > 0) {
+      // Use the order from Twenty CRM enums
+      statusEnums.forEach((statusEnum, index) => {
+        statusOrder[statusEnum.value] = index;
+      });
+    } else {
+      // Fallback order if enums not loaded yet
+      const fallbackStatuses = [
+        'NEW', 'CONTACTED', 'SCHEDULED', 'INSPECTION', 'INSPECTION_INSURANCE_ONLY',
+        'QUALIFIED', 'QUOTED', 'PROPOSAL_SENT', 'CONTRACT_SIGNED', 'JOB_SCHEDULED',
+        'WON', 'LOST', 'NO_VALUE'
+      ];
+      fallbackStatuses.forEach((status, index) => {
+        statusOrder[status] = index;
+      });
+    }
+
+    baseFilteredLeads.sort((a, b) => {
+      const statusA = a.status || '';
+      const statusB = b.status || '';
+      const orderA = statusOrder[statusA] ?? 999; // Unknown statuses go to the end
+      const orderB = statusOrder[statusB] ?? 999;
+      return orderA - orderB;
+    });
+
+    console.log('Final filtered leads (sorted by status):', baseFilteredLeads.length);
     return baseFilteredLeads;
-  }, [getFilteredLeads, currentUser, leads, filters, searchQuery]);
+  }, [getFilteredLeads, currentUser, leads, filters, searchQuery, statusEnums]);
 
   // Handle search with debounce
   useEffect(() => {
@@ -105,24 +164,45 @@ export default function LeadsPage() {
   }, [localSearchQuery, setSearchQuery]);
 
   // Get status badge variant and color
-  const getStatusBadge = (status: LeadStatus) => {
-    const statusConfig: Record<
-      LeadStatus,
-      { label: string; className: string }
-    > = {
-      new: { label: 'New', className: 'bg-blue-100 text-blue-800 border-blue-200' },
-      contacted: { label: 'Contacted', className: 'bg-purple-100 text-purple-800 border-purple-200' },
-      qualified: { label: 'Qualified', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-      quoted: { label: 'Quoted', className: 'bg-orange-100 text-orange-800 border-orange-200' },
-      proposal_sent: { label: 'Proposal Sent', className: 'bg-orange-100 text-orange-800 border-orange-200' },
-      won: { label: 'Won', className: 'bg-green-100 text-green-800 border-green-200' },
-      lost: { label: 'Lost', className: 'bg-gray-100 text-gray-800 border-gray-200' },
+  const getStatusBadge = (status: string | LeadStatus) => {
+    // Color mapping for different status types
+    const statusColorMap: Record<string, string> = {
+      'NEW': 'bg-blue-100 text-blue-800 border-blue-200',
+      'CONTACTED': 'bg-purple-100 text-purple-800 border-purple-200',
+      'SCHEDULED': 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      'INSPECTION': 'bg-cyan-100 text-cyan-800 border-cyan-200',
+      'INSPECTION_INSURANCE_ONLY': 'bg-cyan-100 text-cyan-800 border-cyan-200',
+      'CONTRACT_SIGNED': 'bg-teal-100 text-teal-800 border-teal-200',
+      'JOB_SCHEDULED': 'bg-emerald-100 text-emerald-800 border-emerald-200',
+      'QUALIFIED': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'QUOTED': 'bg-orange-100 text-orange-800 border-orange-200',
+      'PROPOSAL_SENT': 'bg-orange-100 text-orange-800 border-orange-200',
+      'WON': 'bg-green-100 text-green-800 border-green-200',
+      'LOST': 'bg-red-100 text-red-800 border-red-200',
+      'NO_VALUE': 'bg-gray-100 text-gray-800 border-gray-200',
     };
 
-    const config = statusConfig[status] || { label: status || 'Unknown', className: 'bg-gray-100 text-gray-800 border-gray-200' };
+    // Handle null/undefined status
+    if (!status) {
+      return (
+        <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200">
+          No Status
+        </Badge>
+      );
+    }
+
+    const statusValue = status.toString();
+
+    // Find the label from enums if available
+    const enumItem = statusEnums.find(e => e.value === statusValue);
+    const label = enumItem ? enumItem.label : statusValue.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+
+    // Get color class or use default
+    const className = statusColorMap[statusValue] || 'bg-gray-100 text-gray-800 border-gray-200';
+
     return (
-      <Badge variant="outline" className={config.className}>
-        {config.label}
+      <Badge variant="outline" className={className}>
+        {label}
       </Badge>
     );
   };
@@ -301,13 +381,11 @@ export default function LeadsPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All statuses</SelectItem>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="contacted">Contacted</SelectItem>
-                        <SelectItem value="qualified">Qualified</SelectItem>
-                        <SelectItem value="quoted">Quoted</SelectItem>
-                        <SelectItem value="proposal_sent">Proposal Sent</SelectItem>
-                        <SelectItem value="won">Won</SelectItem>
-                        <SelectItem value="lost">Lost</SelectItem>
+                        {statusEnums.map((statusEnum) => (
+                          <SelectItem key={statusEnum.value} value={statusEnum.value}>
+                            {statusEnum.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -412,7 +490,7 @@ export default function LeadsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">New</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {filteredLeads.filter((l) => l.status === 'new').length}
+                    {filteredLeads.filter((l) => l.status === 'NEW').length}
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
@@ -426,13 +504,13 @@ export default function LeadsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Qualified</p>
+                  <p className="text-sm font-medium text-gray-600">Scheduled</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {filteredLeads.filter((l) => l.status === 'qualified').length}
+                    {filteredLeads.filter((l) => l.status === 'SCHEDULED').length}
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center">
-                  <CheckCircle2 className="h-6 w-6 text-yellow-600" />
+                <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-indigo-600" />
                 </div>
               </div>
             </CardContent>
@@ -444,7 +522,7 @@ export default function LeadsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Won</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {filteredLeads.filter((l) => l.status === 'won').length}
+                    {filteredLeads.filter((l) => l.status === 'WON').length}
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
@@ -528,11 +606,6 @@ export default function LeadsPage() {
                         {getSyncStatusIcon(lead)}
                         {getStatusBadge(lead.status)}
                       </div>
-                      {lead.stage && (
-                        <Badge variant="secondary" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
-                          {lead.stage}
-                        </Badge>
-                      )}
                     </div>
                   </div>
                 </CardHeader>
