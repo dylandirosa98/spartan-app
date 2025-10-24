@@ -72,6 +72,8 @@ export async function POST(request: NextRequest) {
         username: user.username,
         email: user.email,
         role: user.role,
+        companyId: user.company_id,
+        salesRep: user.sales_rep,
         workspaceId: user.workspace_id,
         twentyApiKey: user.twenty_api_key || process.env.TWENTY_API_KEY || '',
       },
