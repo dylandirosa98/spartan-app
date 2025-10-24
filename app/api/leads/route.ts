@@ -54,132 +54,73 @@ export async function GET(request: NextRequest) {
       decryptedApiKey
     );
 
-    // Fetch leads from Twenty CRM (with optional salesRep filter)
-    const query = salesRepFilter
-      ? `
-        query GetLeadsBySalesRep($salesRep: LeadSalesRepEnum!) {
-          leads(filter: { salesRep: { eq: $salesRep } }) {
-            edges {
-              node {
-                id
-                name
-                email {
-                  primaryEmail
-                  additionalEmails
-                }
-                phone {
-                  primaryPhoneNumber
-                  additionalPhones
-                }
-                city
-                adress
-                zipCode
-                status
-                source
-                medium
-                salesRep
-                estValue {
-                  amountMicros
-                  currencyCode
-                }
-                notes
-                aiSummary
-                appointmentTime
-                rawUtmSource
-                utmMedium
-                utmCampaign
-                utmContent
-                utmTerm
-                gclid
-                fbclid
-                wbraid
-                callPage {
-                  primaryLinkUrl
-                  primaryLinkLabel
-                  secondaryLinks
-                }
-                createdAt
-                updatedAt
-                deletedAt
-                createdBy {
-                  source
-                  workspaceMemberId
-                  name
-                }
-                position
+    // Fetch ALL leads from Twenty CRM (filter in JavaScript after fetching)
+    const query = `
+      query GetAllLeads {
+        leads {
+          edges {
+            node {
+              id
+              name
+              email {
+                primaryEmail
+                additionalEmails
               }
+              phone {
+                primaryPhoneNumber
+                additionalPhones
+              }
+              city
+              adress
+              zipCode
+              status
+              source
+              medium
+              salesRep
+              estValue {
+                amountMicros
+                currencyCode
+              }
+              notes
+              aiSummary
+              appointmentTime
+              rawUtmSource
+              utmMedium
+              utmCampaign
+              utmContent
+              utmTerm
+              gclid
+              fbclid
+              wbraid
+              callPage {
+                primaryLinkUrl
+                primaryLinkLabel
+                secondaryLinks
+              }
+              createdAt
+              updatedAt
+              deletedAt
+              createdBy {
+                source
+                workspaceMemberId
+                name
+              }
+              position
             }
           }
         }
-      `
-      : `
-        query GetAllLeads {
-          leads {
-            edges {
-              node {
-                id
-                name
-                email {
-                  primaryEmail
-                  additionalEmails
-                }
-                phone {
-                  primaryPhoneNumber
-                  additionalPhones
-                }
-                city
-                adress
-                zipCode
-                status
-                source
-                medium
-                salesRep
-                estValue {
-                  amountMicros
-                  currencyCode
-                }
-                notes
-                aiSummary
-                appointmentTime
-                rawUtmSource
-                utmMedium
-                utmCampaign
-                utmContent
-                utmTerm
-                gclid
-                fbclid
-                wbraid
-                callPage {
-                  primaryLinkUrl
-                  primaryLinkLabel
-                  secondaryLinks
-                }
-                createdAt
-                updatedAt
-                deletedAt
-                createdBy {
-                  source
-                  workspaceMemberId
-                  name
-                }
-                position
-              }
-            }
-          }
-        }
-      `;
+      }
+    `;
 
-    const variables = salesRepFilter ? { salesRep: salesRepFilter } : {};
-    const data = await (twentyClient as any).request(query, variables);
+    const data = await (twentyClient as any).request(query);
 
     console.log(
-      '[Leads API] Fetched leads:',
-      data.leads?.edges?.length || 0,
-      salesRepFilter ? `(filtered by salesRep: ${salesRepFilter})` : '(all leads)'
+      '[Leads API] Fetched leads from Twenty CRM:',
+      data.leads?.edges?.length || 0
     );
 
     // Transform Twenty CRM leads to match frontend Lead interface
-    const transformedLeads = (data.leads?.edges || []).map((edge: any) => {
+    let allLeads = (data.leads?.edges || []).map((edge: any) => {
       const lead = edge.node;
       return {
         id: lead.id,
@@ -201,6 +142,18 @@ export async function GET(request: NextRequest) {
         company_id: companyId,
       };
     });
+
+    // Filter by salesRep if specified (do this in JavaScript instead of GraphQL)
+    const transformedLeads = salesRepFilter
+      ? allLeads.filter(lead => lead.assignedTo === salesRepFilter)
+      : allLeads;
+
+    console.log(
+      '[Leads API] After filtering:',
+      transformedLeads.length,
+      'leads',
+      salesRepFilter ? `(salesRep: ${salesRepFilter})` : '(no filter)'
+    );
 
     return NextResponse.json({ leads: transformedLeads });
 
