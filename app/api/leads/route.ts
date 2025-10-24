@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Get company configuration to access Twenty CRM
+    console.log('[Leads API] Looking for company with ID:', companyId);
+
     const { data: company, error: companyError } = await supabaseClient
       .from('companies')
       .select('twenty_api_url, twenty_api_key')
@@ -39,8 +41,17 @@ export async function GET(request: NextRequest) {
 
     if (companyError || !company) {
       console.error('[Leads API] Company fetch error:', companyError);
+      console.error('[Leads API] Company ID searched:', companyId);
+      console.error('[Leads API] Error details:', {
+        message: companyError?.message,
+        code: companyError?.code,
+        details: companyError?.details,
+      });
       return NextResponse.json(
-        { error: 'Company not found' },
+        {
+          error: 'Company not found',
+          details: `No company found with ID: ${companyId}. Please ensure the mobile user has a valid company_id.`
+        },
         { status: 404 }
       );
     }

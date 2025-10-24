@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Spartan CRM",
+    "slug": "spartan-crm",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./public/icon-512x512.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./public/icon-512x512.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.spartancrm.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./public/icon-512x512.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.spartancrm.app"
+    },
+    "web": {
+      "favicon": "./public/favicon.ico",
+      "bundler": "metro"
+    }
+  }
+}
