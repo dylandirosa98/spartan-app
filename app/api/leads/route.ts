@@ -16,12 +16,14 @@ const supabaseClient = createClient(
  * Query params:
  *   - company_id (required)
  *   - salesRep (optional) - filter leads by sales rep
+ *   - since (optional) - ISO timestamp to fetch only leads updated after this time (delta sync)
  */
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const companyId = url.searchParams.get('company_id');
     const salesRepFilter = url.searchParams.get('salesRep');
+    const since = url.searchParams.get('since');
 
     if (!companyId) {
       return NextResponse.json(
@@ -153,6 +155,21 @@ export async function GET(request: NextRequest) {
         company_id: companyId,
       };
     });
+
+    // Filter by updatedAt if 'since' parameter is provided (delta sync)
+    if (since) {
+      const sinceDate = new Date(since);
+      allLeads = allLeads.filter((lead: any) => {
+        const updatedAt = new Date(lead.updatedAt);
+        return updatedAt > sinceDate;
+      });
+      console.log(
+        '[Leads API] Delta sync: filtered to',
+        allLeads.length,
+        'leads updated since',
+        since
+      );
+    }
 
     // Filter by salesRep if specified (do this in JavaScript instead of GraphQL)
     const transformedLeads = salesRepFilter
