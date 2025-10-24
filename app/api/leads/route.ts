@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
 
     // Filter by salesRep if specified (do this in JavaScript instead of GraphQL)
     const transformedLeads = salesRepFilter
-      ? allLeads.filter(lead => lead.assignedTo === salesRepFilter)
+      ? allLeads.filter((lead: any) => lead.assignedTo === salesRepFilter)
       : allLeads;
 
     console.log(
