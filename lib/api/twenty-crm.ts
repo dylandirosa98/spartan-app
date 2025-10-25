@@ -420,6 +420,38 @@ export class TwentyCRMClient {
    */
   async deleteNote(noteId: string): Promise<boolean> {
     try {
+      // First, delete all noteTargets associated with this note
+      const getNoteTargetsQuery = `
+        query GetNoteTargets($noteId: UUID!) {
+          noteTargets(filter: { noteId: { eq: $noteId } }) {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+        }
+      `;
+
+      const noteTargetsData = await this.request(getNoteTargetsQuery, { noteId });
+
+      // Delete each noteTarget
+      if (noteTargetsData.noteTargets?.edges?.length > 0) {
+        for (const edge of noteTargetsData.noteTargets.edges) {
+          const deleteNoteTargetMutation = `
+            mutation DeleteNoteTarget($id: UUID!) {
+              deleteNoteTarget(id: $id) {
+                id
+              }
+            }
+          `;
+
+          await this.request(deleteNoteTargetMutation, { id: edge.node.id });
+          console.log('[Twenty Client] Deleted noteTarget:', edge.node.id);
+        }
+      }
+
+      // Now delete the note itself
       const mutation = `
         mutation DeleteNote($noteId: UUID!) {
           deleteNote(id: $noteId) {
