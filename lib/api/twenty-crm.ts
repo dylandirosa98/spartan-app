@@ -346,6 +346,92 @@ export class TwentyCRMClient {
       throw error;
     }
   }
+
+  /**
+   * Update an existing note in Twenty CRM
+   */
+  async updateNote(noteId: string, updates: { title?: string; body?: string }): Promise<any> {
+    try {
+      // Convert plain text to BlockNote format if body is provided
+      let bodyV2Input = undefined;
+      if (updates.body !== undefined) {
+        const blocknoteContent = JSON.stringify([
+          {
+            type: 'paragraph',
+            content: [
+              {
+                type: 'text',
+                text: updates.body
+              }
+            ]
+          }
+        ]);
+
+        bodyV2Input = {
+          blocknote: blocknoteContent,
+          markdown: null
+        };
+      }
+
+      const mutation = `
+        mutation UpdateNote($noteId: ID!, $title: String, $bodyV2: RichTextV2UpdateInput) {
+          updateNote(id: $noteId, data: { title: $title, bodyV2: $bodyV2 }) {
+            id
+            title
+            bodyV2 {
+              markdown
+              blocknote
+            }
+            createdAt
+            updatedAt
+          }
+        }
+      `;
+
+      const data = await this.request(mutation, {
+        noteId,
+        title: updates.title,
+        bodyV2: bodyV2Input,
+      });
+
+      console.log('[Twenty Client] Note updated:', JSON.stringify(data, null, 2));
+
+      const note = data.updateNote;
+      return {
+        id: note.id,
+        title: note.title || '',
+        body: note.bodyV2?.markdown || '',
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt,
+      };
+    } catch (error) {
+      console.error(`[Twenty Client] Failed to update note ${noteId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a note from Twenty CRM
+   */
+  async deleteNote(noteId: string): Promise<boolean> {
+    try {
+      const mutation = `
+        mutation DeleteNote($noteId: ID!) {
+          deleteNote(id: $noteId) {
+            id
+          }
+        }
+      `;
+
+      await this.request(mutation, { noteId });
+
+      console.log('[Twenty Client] Note deleted successfully');
+      return true;
+    } catch (error) {
+      console.error(`[Twenty Client] Failed to delete note ${noteId}:`, error);
+      throw error;
+    }
+  }
 }
 
 /**
