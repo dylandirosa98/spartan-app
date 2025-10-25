@@ -246,14 +246,17 @@ export class TwentyCRMClient {
       const data = await this.request(query, { leadId });
       console.log('[Twenty Client] Notes response:', JSON.stringify(data, null, 2));
 
-      const notes = data.noteTargets?.edges?.map((edge: any) => ({
-        id: edge.node.note.id,
-        title: edge.node.note.title || '',
-        body: edge.node.note.bodyV2?.markdown || '',
-        createdAt: edge.node.note.createdAt,
-        updatedAt: edge.node.note.updatedAt,
-        createdBy: null,
-      })) || [];
+      // Filter out noteTargets with null notes (orphaned references from deleted notes)
+      const notes = data.noteTargets?.edges
+        ?.filter((edge: any) => edge.node.note != null)
+        ?.map((edge: any) => ({
+          id: edge.node.note.id,
+          title: edge.node.note.title || '',
+          body: edge.node.note.bodyV2?.markdown || '',
+          createdAt: edge.node.note.createdAt,
+          updatedAt: edge.node.note.updatedAt,
+          createdBy: null,
+        })) || [];
 
       return notes;
     } catch (error) {
