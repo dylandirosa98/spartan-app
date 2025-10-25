@@ -10,17 +10,19 @@ const supabase = createClient(
 
 /**
  * GET /api/files?companyId=xxx&leadId=xxx
- * Fetch all files/attachments for a lead from Twenty CRM
+ * GET /api/files?companyId=xxx&taskId=xxx
+ * Fetch all files/attachments for a lead or task from Twenty CRM
  */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const companyId = searchParams.get('companyId');
     const leadId = searchParams.get('leadId');
+    const taskId = searchParams.get('taskId');
 
-    if (!companyId || !leadId) {
+    if (!companyId || (!leadId && !taskId)) {
       return NextResponse.json(
-        { error: 'companyId and leadId are required' },
+        { error: 'companyId and either leadId or taskId are required' },
         { status: 400 }
       );
     }
@@ -48,31 +50,55 @@ export async function GET(request: NextRequest) {
       decryptedApiKey
     );
 
-    // Query attachments for the lead
-    const query = `
-      query GetAttachments($leadId: UUID!) {
-        attachments(filter: { leadId: { eq: $leadId } }) {
-          edges {
-            node {
-              id
-              name
-              fullPath
-              type
-              createdAt
-              updatedAt
+    // Query attachments for either lead or task
+    let query: string;
+    let variables: any;
+
+    if (leadId) {
+      query = `
+        query GetAttachments($leadId: UUID!) {
+          attachments(filter: { leadId: { eq: $leadId } }) {
+            edges {
+              node {
+                id
+                name
+                fullPath
+                type
+                createdAt
+                updatedAt
+              }
             }
           }
         }
-      }
-    `;
+      `;
+      variables = { leadId };
+      console.log('[Files API] Fetching attachments for leadId:', leadId);
+    } else {
+      query = `
+        query GetAttachments($taskId: UUID!) {
+          attachments(filter: { taskId: { eq: $taskId } }) {
+            edges {
+              node {
+                id
+                name
+                fullPath
+                type
+                createdAt
+                updatedAt
+              }
+            }
+          }
+        }
+      `;
+      variables = { taskId };
+      console.log('[Files API] Fetching attachments for taskId:', taskId);
+    }
 
-    console.log('[Files API] Fetching attachments for leadId:', leadId);
-
-    const data = await (twentyClient as any).request(query, { leadId });
+    const data = await (twentyClient as any).request(query, variables);
 
     const files = data.attachments?.edges?.map((edge: any) => edge.node) || [];
 
-    console.log('[Files API] Fetched files for lead:', leadId, files.length);
+    console.log('[Files API] Fetched files:', files.length);
 
     return NextResponse.json({ files });
   } catch (error) {
@@ -89,18 +115,19 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/files
- * Upload a file and attach it to a lead in Twenty CRM
+ * Upload a file and attach it to a lead or task in Twenty CRM
  */
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const leadId = formData.get('leadId') as string;
+    const leadId = formData.get('leadId') as string | null;
+    const taskId = formData.get('taskId') as string | null;
     const companyId = formData.get('companyId') as string;
 
-    if (!file || !leadId || !companyId) {
+    if (!file || (!leadId && !taskId) || !companyId) {
       return NextResponse.json(
-        { error: 'file, leadId, and companyId are required' },
+        { error: 'file, companyId, and either leadId or taskId are required' },
         { status: 400 }
       );
     }
@@ -128,21 +155,55 @@ export async function POST(request: NextRequest) {
     // Step 1: Create attachment record to get attachment ID
     console.log('[Files API] Step 1: Creating attachment record...');
 
-    const createAttachmentMutation = `
-      mutation CreateAttachment($leadId: ID!, $fileName: String!, $mimeType: String!) {
-        createAttachment(data: {
-          name: $fileName
-          type: $mimeType
-          leadId: $leadId
-        }) {
-          id
-          name
-          fullPath
-          type
-          createdAt
+    // Build mutation and variables based on whether it's a lead or task
+    let createAttachmentMutation: string;
+    let createVariables: any;
+
+    if (leadId) {
+      createAttachmentMutation = `
+        mutation CreateAttachment($leadId: ID!, $fileName: String!, $mimeType: String!) {
+          createAttachment(data: {
+            name: $fileName
+            type: $mimeType
+            leadId: $leadId
+          }) {
+            id
+            name
+            fullPath
+            type
+            createdAt
+          }
         }
-      }
-    `;
+      `;
+      createVariables = {
+        leadId: leadId,
+        fileName: file.name,
+        mimeType: file.type,
+      };
+      console.log('[Files API] Creating attachment for leadId:', leadId);
+    } else {
+      createAttachmentMutation = `
+        mutation CreateAttachment($taskId: ID!, $fileName: String!, $mimeType: String!) {
+          createAttachment(data: {
+            name: $fileName
+            type: $mimeType
+            taskId: $taskId
+          }) {
+            id
+            name
+            fullPath
+            type
+            createdAt
+          }
+        }
+      `;
+      createVariables = {
+        taskId: taskId,
+        fileName: file.name,
+        mimeType: file.type,
+      };
+      console.log('[Files API] Creating attachment for taskId:', taskId);
+    }
 
     const createResponse = await fetch(graphqlUrl, {
       method: 'POST',
@@ -152,11 +213,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         query: createAttachmentMutation,
-        variables: {
-          leadId: leadId,
-          fileName: file.name,
-          mimeType: file.type,
-        },
+        variables: createVariables,
       }),
     });
 
