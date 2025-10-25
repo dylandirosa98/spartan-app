@@ -352,9 +352,15 @@ export class TwentyCRMClient {
    */
   async updateNote(noteId: string, updates: { title?: string; body?: string }): Promise<any> {
     try {
-      // Convert plain text to BlockNote format if body is provided
-      let bodyV2Input = undefined;
+      // Build update data object with only the fields being updated
+      const updateData: any = {};
+
+      if (updates.title !== undefined) {
+        updateData.title = updates.title;
+      }
+
       if (updates.body !== undefined) {
+        // Convert plain text to BlockNote format
         const blocknoteContent = JSON.stringify([
           {
             type: 'paragraph',
@@ -367,15 +373,15 @@ export class TwentyCRMClient {
           }
         ]);
 
-        bodyV2Input = {
+        updateData.bodyV2 = {
           blocknote: blocknoteContent,
           markdown: null
         };
       }
 
       const mutation = `
-        mutation UpdateNote($noteId: ID!, $title: String, $bodyV2: RichTextV2UpdateInput) {
-          updateNote(id: $noteId, data: { title: $title, bodyV2: $bodyV2 }) {
+        mutation UpdateNote($noteId: UUID!, $data: NoteUpdateInput!) {
+          updateNote(id: $noteId, data: $data) {
             id
             title
             bodyV2 {
@@ -390,8 +396,7 @@ export class TwentyCRMClient {
 
       const data = await this.request(mutation, {
         noteId,
-        title: updates.title,
-        bodyV2: bodyV2Input,
+        data: updateData,
       });
 
       console.log('[Twenty Client] Note updated:', JSON.stringify(data, null, 2));
@@ -416,7 +421,7 @@ export class TwentyCRMClient {
   async deleteNote(noteId: string): Promise<boolean> {
     try {
       const mutation = `
-        mutation DeleteNote($noteId: ID!) {
+        mutation DeleteNote($noteId: UUID!) {
           deleteNote(id: $noteId) {
             id
           }
