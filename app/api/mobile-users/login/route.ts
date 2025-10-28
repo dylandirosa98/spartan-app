@@ -38,14 +38,28 @@ export async function POST(request: NextRequest) {
 
     const { username, password } = validation.data;
 
-    // Fetch user from database
+    // Fetch user from database with company info
     const { data: user, error: fetchError } = await supabase
       .from('mobile_users')
-      .select('id, username, email, password_hash, sales_rep, company_id, role, is_active')
+      .select(`
+        id,
+        username,
+        email,
+        password_hash,
+        sales_rep,
+        company_id,
+        role,
+        is_active,
+        companies:company_id (
+          twenty_api_url,
+          twenty_api_key
+        )
+      `)
       .eq('username', username)
       .single();
 
     if (fetchError || !user) {
+      console.error('[Mobile Users API] User fetch error:', fetchError);
       return NextResponse.json(
         { error: 'Invalid username or password' },
         { status: 401 }
@@ -78,6 +92,9 @@ export async function POST(request: NextRequest) {
 
     console.log('[Mobile Users API] Login successful:', username, 'Sales Rep:', user.sales_rep);
 
+    // Get company data
+    const company = Array.isArray(user.companies) ? user.companies[0] : user.companies;
+
     // Return user data (excluding password hash)
     return NextResponse.json({
       success: true,
@@ -88,6 +105,8 @@ export async function POST(request: NextRequest) {
         salesRep: user.sales_rep,
         companyId: user.company_id,
         role: user.role,
+        twentyApiKey: company?.twenty_api_key || null,
+        twentyApiUrl: company?.twenty_api_url || null,
       },
     });
 
