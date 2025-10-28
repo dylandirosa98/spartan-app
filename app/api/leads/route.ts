@@ -223,8 +223,9 @@ export async function POST(request: NextRequest) {
       status: leadData.status || 'new',
       notes: leadData.notes || null,
       source: leadData.source || 'website',
-      medium: leadData.medium || null,
-      assigned_to: leadData.assignedTo || leadData.assigned_to || null,
+      // Note: medium field doesn't exist in Supabase leads table
+      // Note: assigned_to expects UUID reference to users table, setting to null for now
+      assigned_to: null,
     };
 
     const { data, error } = await supabase
@@ -249,7 +250,6 @@ export async function POST(request: NextRequest) {
       assignedTo: data.assigned_to,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
-      medium: data.medium || null,
     };
 
     return NextResponse.json({ lead: transformedLead }, { status: 201 });
@@ -292,9 +292,8 @@ export async function PATCH(request: NextRequest) {
     if (leadData.status !== undefined) supabaseData.status = leadData.status;
     if (leadData.notes !== undefined) supabaseData.notes = leadData.notes;
     if (leadData.source !== undefined) supabaseData.source = leadData.source;
-    if (leadData.medium !== undefined) supabaseData.medium = leadData.medium;
-    if (leadData.assignedTo !== undefined) supabaseData.assigned_to = leadData.assignedTo;
-    if (leadData.assigned_to !== undefined) supabaseData.assigned_to = leadData.assigned_to;
+    // Note: medium field doesn't exist in Supabase leads table
+    // Note: assignedTo/assigned_to expects UUID reference to users table, not updating for now
 
     const { data, error } = await supabase
       .from('leads')
@@ -366,7 +365,6 @@ export async function PATCH(request: NextRequest) {
       assignedTo: data.assigned_to,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
-      medium: data.medium || null,
     };
 
     return NextResponse.json({ lead: transformedLead });
