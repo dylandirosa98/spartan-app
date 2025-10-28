@@ -223,6 +223,7 @@ export async function POST(request: NextRequest) {
       status: leadData.status || 'new',
       notes: leadData.notes || null,
       source: leadData.source || 'website',
+      medium: leadData.medium || null,
       assigned_to: leadData.assignedTo || leadData.assigned_to || null,
     };
 
@@ -291,6 +292,7 @@ export async function PATCH(request: NextRequest) {
     if (leadData.status !== undefined) supabaseData.status = leadData.status;
     if (leadData.notes !== undefined) supabaseData.notes = leadData.notes;
     if (leadData.source !== undefined) supabaseData.source = leadData.source;
+    if (leadData.medium !== undefined) supabaseData.medium = leadData.medium;
     if (leadData.assignedTo !== undefined) supabaseData.assigned_to = leadData.assignedTo;
     if (leadData.assigned_to !== undefined) supabaseData.assigned_to = leadData.assigned_to;
 
