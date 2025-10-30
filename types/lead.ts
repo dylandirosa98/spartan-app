@@ -24,16 +24,22 @@ export type LeadMedium =
   | 'organic';
 
 /**
- * Lead status in the sales pipeline
+ * Lead status in the sales pipeline (Twenty CRM values)
  */
 export type LeadStatus =
-  | 'new'
-  | 'contacted'
-  | 'qualified'
-  | 'quoted'
-  | 'proposal_sent'
-  | 'won'
-  | 'lost';
+  | 'NEW'
+  | 'CONTACTED'
+  | 'SCHEDULED'
+  | 'INSPECTION_INSURANCE'
+  | 'PROPOSAL_SENT'
+  | 'CONTRACT_SIGNED'
+  | 'LOST'
+  | 'JOB_SCHEDULED'
+  | 'JOB_COMPLETED'
+  | 'INVOICE_SENT'
+  | 'PAST_DUE_30_DAYS'
+  | 'PAID'
+  | 'PAID_30_DAYS';
 
 /**
  * Property type for the lead
@@ -148,13 +154,19 @@ export const LeadSchema = z.object({
     'organic'
   ]),
   status: z.enum([
-    'new',
-    'contacted',
-    'qualified',
-    'quoted',
-    'proposal_sent',
-    'won',
-    'lost'
+    'NEW',
+    'CONTACTED',
+    'SCHEDULED',
+    'INSPECTION_INSURANCE',
+    'PROPOSAL_SENT',
+    'CONTRACT_SIGNED',
+    'LOST',
+    'JOB_SCHEDULED',
+    'JOB_COMPLETED',
+    'INVOICE_SENT',
+    'PAST_DUE_30_DAYS',
+    'PAID',
+    'PAID_30_DAYS'
   ]),
   stage: z.string().max(100, 'Stage name is too long').optional(),
   notes: z.string().max(5000, 'Notes are too long').optional(),
@@ -200,13 +212,19 @@ export const CreateLeadSchema = z.object({
     'organic'
   ]),
   status: z.enum([
-    'new',
-    'contacted',
-    'qualified',
-    'quoted',
-    'proposal_sent',
-    'won',
-    'lost'
+    'NEW',
+    'CONTACTED',
+    'SCHEDULED',
+    'INSPECTION_INSURANCE',
+    'PROPOSAL_SENT',
+    'CONTRACT_SIGNED',
+    'LOST',
+    'JOB_SCHEDULED',
+    'JOB_COMPLETED',
+    'INVOICE_SENT',
+    'PAST_DUE_30_DAYS',
+    'PAID',
+    'PAID_30_DAYS'
   ]),
   stage: z.string().max(100, 'Stage name is too long').optional(),
   notes: z.string().max(5000, 'Notes are too long').optional(),

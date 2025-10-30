@@ -45,6 +45,19 @@ interface UserFormData {
   password: string;
   email: string;
   salesRep: string;
+  role: string;
+}
+
+interface MobileUser {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  sales_rep: string;
+  company_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function MobileUsersPage() {
@@ -53,8 +66,10 @@ export default function MobileUsersPage() {
   const { toast } = useToast();
 
   const [salesReps, setSalesReps] = useState<string[]>([]);
+  const [users, setUsers] = useState<MobileUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFetchingSalesReps, setIsFetchingSalesReps] = useState(false);
+  const [isFetchingUsers, setIsFetchingUsers] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -64,6 +79,7 @@ export default function MobileUsersPage() {
     password: '',
     email: '',
     salesRep: '',
+    role: 'sales_rep',
   });
 
   // Fetch sales reps from Twenty CRM
@@ -93,9 +109,35 @@ export default function MobileUsersPage() {
     }
   };
 
+  // Fetch mobile users
+  const fetchUsers = async () => {
+    try {
+      setIsFetchingUsers(true);
+      const response = await fetch('/api/mobile-users');
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch mobile users');
+      }
+
+      const data = await response.json();
+      setUsers(data.users || []);
+      console.log('[Mobile Users] Fetched users:', data.users);
+    } catch (error) {
+      console.error('[Mobile Users] Error fetching users:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load mobile users',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsFetchingUsers(false);
+    }
+  };
+
   useEffect(() => {
     if (companyId) {
       fetchSalesReps();
+      fetchUsers();
       setIsLoading(false);
     }
   }, [companyId]);
@@ -104,7 +146,7 @@ export default function MobileUsersPage() {
   const handleCreateUser = async () => {
     try {
       // Validation
-      if (!formData.username || !formData.password || !formData.email || !formData.salesRep) {
+      if (!formData.username || !formData.password || !formData.email || !formData.salesRep || !formData.role) {
         toast({
           title: 'Validation Error',
           description: 'Please fill in all required fields',
@@ -158,8 +200,12 @@ export default function MobileUsersPage() {
           password: '',
           email: '',
           salesRep: '',
+          role: 'sales_rep',
         });
         setShowCreateDialog(false);
+
+        // Refresh users list
+        fetchUsers();
       } else {
         throw new Error(data.error || data.message || 'Failed to create user');
       }
@@ -252,6 +298,23 @@ export default function MobileUsersPage() {
                     </Select>
                     <p className="text-xs text-gray-500 mt-1">
                       This user will only see leads assigned to this sales rep
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="role">Role *</Label>
+                    <Select
+                      value={formData.role}
+                      onValueChange={(value) => setFormData({ ...formData, role: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sales_rep">Sales Rep</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Currently only Sales Rep role is available
                     </p>
                   </div>
                   <div>
@@ -381,18 +444,85 @@ export default function MobileUsersPage() {
           </CardContent>
         </Card>
 
-        {/* Users List - TODO: Implement GET endpoint */}
+        {/* Users List */}
         <Card>
           <CardHeader>
             <CardTitle>Registered Users</CardTitle>
             <CardDescription>
-              Mobile app user accounts (listing coming soon)
+              {isFetchingUsers
+                ? 'Loading mobile users...'
+                : `${users.length} mobile ${users.length === 1 ? 'user' : 'users'} registered`}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              User listing feature coming soon
-            </div>
+            {isFetchingUsers ? (
+              <div className="flex justify-center items-center py-8">
+                <RefreshCw className="h-6 w-6 animate-spin text-[#C41E3A]" />
+              </div>
+            ) : users.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600 mb-2">No mobile users registered yet</p>
+                <p className="text-sm text-gray-500">
+                  Click "Add User" above to create a mobile app account
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="border-b">
+                    <tr className="text-left">
+                      <th className="pb-3 font-semibold text-gray-900">Username</th>
+                      <th className="pb-3 font-semibold text-gray-900">Email</th>
+                      <th className="pb-3 font-semibold text-gray-900">Sales Rep</th>
+                      <th className="pb-3 font-semibold text-gray-900">Role</th>
+                      <th className="pb-3 font-semibold text-gray-900">Status</th>
+                      <th className="pb-3 font-semibold text-gray-900">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {users.map((user) => (
+                      <tr key={user.id}>
+                        <td className="py-4">
+                          <div className="flex items-center gap-2">
+                            <Smartphone className="h-4 w-4 text-gray-400" />
+                            <span className="font-medium">{user.username}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 text-gray-600">{user.email}</td>
+                        <td className="py-4">
+                          <div className="flex items-center gap-2">
+                            <UserCheck className="h-4 w-4 text-[#C41E3A]" />
+                            <span className="font-medium text-gray-900">{user.sales_rep}</span>
+                          </div>
+                        </td>
+                        <td className="py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {user.role === 'sales_rep' ? 'Sales Rep' : user.role}
+                          </span>
+                        </td>
+                        <td className="py-4">
+                          {user.is_active ? (
+                            <span className="inline-flex items-center gap-1 text-sm text-green-600">
+                              <CheckCircle2 className="h-4 w-4" />
+                              Active
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-400">Inactive</span>
+                          )}
+                        </td>
+                        <td className="py-4 text-sm text-gray-500">
+                          {new Date(user.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

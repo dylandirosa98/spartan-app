@@ -490,7 +490,7 @@ export default function LeadsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">New</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {filteredLeads.filter((l) => l.status === 'new').length}
+                    {filteredLeads.filter((l) => l.status === 'NEW').length}
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
@@ -506,7 +506,7 @@ export default function LeadsPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Scheduled</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {filteredLeads.filter((l) => l.status === 'contacted').length}
+                    {filteredLeads.filter((l) => l.status === 'SCHEDULED').length}
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
@@ -520,9 +520,9 @@ export default function LeadsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Won</p>
+                  <p className="text-sm font-medium text-gray-600">Converted</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {filteredLeads.filter((l) => l.status === 'won').length}
+                    {filteredLeads.filter((l) => ['CONTRACT_SIGNED', 'JOB_SCHEDULED', 'JOB_COMPLETED', 'INVOICE_SENT', 'PAST_DUE_30_DAYS', 'PAID', 'PAID_30_DAYS'].includes(l.status)).length}
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">

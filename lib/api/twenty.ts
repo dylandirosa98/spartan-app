@@ -128,7 +128,7 @@ function twentyPersonToLead(person: TwentyPerson): Lead {
     zipCode: person.address?.addressPostcode || '',
     source: 'website', // Default source, should be mapped from Twenty CRM
     medium: 'organic', // Default medium, should be mapped from Twenty CRM
-    status: 'new', // Default status, should be mapped from Twenty CRM
+    status: 'NEW', // Default status, should be mapped from Twenty CRM
     stage: stage, // Twenty CRM opportunity stage
     createdAt: person.createdAt,
     updatedAt: person.updatedAt,
@@ -331,7 +331,7 @@ class TwentyApiClient {
             zipCode: item.address?.postalCode || item.zipCode || '',
             source: (item.source || 'website') as any,
             medium: (item.medium || 'organic') as any,
-            status: (item.status || 'new') as any,
+            status: (item.status || 'NEW') as any,
             stage: item.stage || item.opportunityStage || undefined,
             notes: item.notes || '',
             estimatedValue: item.estValue?.amountMicros ? item.estValue.amountMicros / 1000000 : (item.estimatedValue || item.amount),

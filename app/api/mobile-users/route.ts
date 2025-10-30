@@ -9,10 +9,11 @@ export async function GET(_request: NextRequest) {
     // Fetch all users from Supabase
     const { data: users, error } = await supabase
       .from('mobile_users')
-      .select('id, username, email, role, workspace_id, is_active, created_at, updated_at')
+      .select('id, username, email, role, sales_rep, company_id, is_active, created_at, updated_at')
       .order('created_at', { ascending: false });
 
     if (error) {
+      console.error('Error fetching mobile users:', error);
       throw error;
     }
 

@@ -53,12 +53,19 @@ const SOURCE_COLORS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  new: '#3B82F6',
-  contacted: '#8B5CF6',
-  qualified: '#F59E0B',
-  proposal_sent: '#10B981',
-  won: CHART_COLORS.success,
-  lost: '#EF4444',
+  NEW: '#3B82F6',
+  CONTACTED: '#8B5CF6',
+  SCHEDULED: '#06B6D4',
+  INSPECTION_INSURANCE: '#F59E0B',
+  PROPOSAL_SENT: '#10B981',
+  CONTRACT_SIGNED: '#22C55E',
+  LOST: '#EF4444',
+  JOB_SCHEDULED: '#84CC16',
+  JOB_COMPLETED: '#65A30D',
+  INVOICE_SENT: '#14B8A6',
+  PAST_DUE_30_DAYS: '#F97316',
+  PAID: CHART_COLORS.success,
+  PAID_30_DAYS: '#059669',
 };
 
 export default function AnalyticsPage() {
@@ -72,19 +79,32 @@ export default function AnalyticsPage() {
 
   // Calculate key metrics
   const metrics = useMemo(() => {
+    // Define converted statuses (successful conversions)
+    const convertedStatuses = [
+      'CONTRACT_SIGNED',
+      'JOB_SCHEDULED',
+      'JOB_COMPLETED',
+      'INVOICE_SENT',
+      'PAST_DUE_30_DAYS',
+      'PAID',
+      'PAID_30_DAYS'
+    ];
+
     const totalLeads = leads.length;
-    const wonLeads = leads.filter((lead) => lead.status === 'won').length;
-    const lostLeads = leads.filter((lead) => lead.status === 'lost').length;
-    const closedLeads = wonLeads + lostLeads;
+    const convertedLeads = leads.filter((lead) => convertedStatuses.includes(lead.status)).length;
+    const lostLeads = leads.filter((lead) => lead.status === 'LOST').length;
+    const closedLeads = convertedLeads + lostLeads; // Only converted + lost count toward conversion rate
 
-    const conversionRate = closedLeads > 0 ? (wonLeads / closedLeads) * 100 : 0;
-    const winRate = totalLeads > 0 ? (wonLeads / totalLeads) * 100 : 0;
+    // Conversion rate = converted / (converted + lost)
+    const conversionRate = closedLeads > 0 ? (convertedLeads / closedLeads) * 100 : 0;
+    const winRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
 
+    // Only count revenue from converted statuses
     const totalRevenue = leads
-      .filter((lead) => lead.status === 'won' && lead.estimatedValue)
+      .filter((lead) => convertedStatuses.includes(lead.status) && lead.estimatedValue)
       .reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
 
-    const avgDealSize = wonLeads > 0 ? totalRevenue / wonLeads : 0;
+    const avgDealSize = convertedLeads > 0 ? totalRevenue / convertedLeads : 0;
 
     return {
       totalLeads,
@@ -92,7 +112,7 @@ export default function AnalyticsPage() {
       totalRevenue,
       winRate,
       avgDealSize,
-      wonLeads,
+      wonLeads: convertedLeads,
     };
   }, [leads]);
 
@@ -113,24 +133,21 @@ export default function AnalyticsPage() {
 
   // Lead status funnel data
   const statusData = useMemo(() => {
-    const statusCount: Record<string, number> = {
-      new: 0,
-      contacted: 0,
-      qualified: 0,
-      proposal_sent: 0,
-      won: 0,
-      lost: 0,
-    };
+    const statusCount: Record<string, number> = {};
 
+    // Count leads by status
     leads.forEach((lead) => {
       statusCount[lead.status] = (statusCount[lead.status] || 0) + 1;
     });
 
-    return Object.entries(statusCount).map(([name, count]) => ({
-      name: name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-      count,
-      color: STATUS_COLORS[name] || CHART_COLORS.primary,
-    }));
+    // Convert to array and format
+    return Object.entries(statusCount)
+      .map(([name, count]) => ({
+        name: name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        count,
+        color: STATUS_COLORS[name] || CHART_COLORS.primary,
+      }))
+      .sort((a, b) => b.count - a.count); // Sort by count descending
   }, [leads]);
 
   // Leads over time data (last 6 months)
@@ -163,6 +180,16 @@ export default function AnalyticsPage() {
 
   // Revenue by month data
   const revenueByMonthData = useMemo(() => {
+    const convertedStatuses = [
+      'CONTRACT_SIGNED',
+      'JOB_SCHEDULED',
+      'JOB_COMPLETED',
+      'INVOICE_SENT',
+      'PAST_DUE_30_DAYS',
+      'PAID',
+      'PAID_30_DAYS'
+    ];
+
     const monthlyRevenue: Record<string, number> = {};
     const now = new Date();
 
@@ -174,7 +201,7 @@ export default function AnalyticsPage() {
     }
 
     leads
-      .filter((lead) => lead.status === 'won' && lead.estimatedValue)
+      .filter((lead) => convertedStatuses.includes(lead.status) && lead.estimatedValue)
       .forEach((lead) => {
         if (lead.createdAt) {
           const leadDate = new Date(lead.createdAt);

@@ -17,6 +17,7 @@ const registerSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   salesRep: z.string().min(1, 'Sales rep is required'),
   companyId: z.string().uuid('Invalid company ID'),
+  role: z.enum(['sales_rep'], { errorMap: () => ({ message: 'Role must be sales_rep' }) }),
 });
 
 /**
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { username, email, password, salesRep, companyId } = validation.data;
+    const { username, email, password, salesRep, companyId, role } = validation.data;
 
     // Check if company exists
     const { data: company, error: companyError } = await supabase
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
         password_hash: passwordHash,
         sales_rep: salesRep,
         company_id: companyId,
-        role: 'sales_rep',
+        role: role,
         is_active: true,
       })
       .select('id, username, email, sales_rep, company_id, role, created_at')

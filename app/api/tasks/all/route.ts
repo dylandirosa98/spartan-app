@@ -9,13 +9,15 @@ const supabase = createClient(
 );
 
 /**
- * GET /api/tasks/all?companyId=xxx
+ * GET /api/tasks/all?companyId=xxx&salesRep=xxx
  * Fetch all tasks for a company (for calendar view)
+ * If salesRep is provided, only returns tasks for leads assigned to that sales rep
  */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const companyId = searchParams.get('companyId');
+    const salesRep = searchParams.get('salesRep');
 
     if (!companyId) {
       return NextResponse.json(
@@ -75,6 +77,7 @@ export async function GET(request: NextRequest) {
               lead {
                 id
                 name
+                salesRep
               }
             }
           }
@@ -87,12 +90,19 @@ export async function GET(request: NextRequest) {
     console.log('[Tasks All API] Fetched all tasks');
 
     // Transform the data to include lead information
-    const tasks = data.taskTargets?.edges?.map((edge: any) => ({
+    let tasks = data.taskTargets?.edges?.map((edge: any) => ({
       ...edge.node.task,
       body: edge.node.task.bodyV2?.markdown || null,
       leadId: edge.node.lead?.id || null,
       leadName: edge.node.lead?.name || null,
+      leadSalesRep: edge.node.lead?.salesRep || null,
     })) || [];
+
+    // Filter by sales rep if provided
+    if (salesRep) {
+      tasks = tasks.filter((task: any) => task.leadSalesRep === salesRep);
+      console.log(`[Tasks All API] Filtered to ${tasks.length} tasks for sales rep: ${salesRep}`);
+    }
 
     return NextResponse.json({
       tasks: tasks,
