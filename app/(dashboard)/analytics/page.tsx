@@ -77,6 +77,17 @@ export default function AnalyticsPage() {
     fetchLeads();
   }, [fetchLeads]);
 
+  // Helper function to get lead value from either estimatedValue or estValue
+  const getLeadValue = (lead: any): number => {
+    if (lead.estimatedValue) {
+      return lead.estimatedValue;
+    }
+    if (lead.estValue?.amountMicros) {
+      return lead.estValue.amountMicros / 1000000;
+    }
+    return 0;
+  };
+
   // Calculate key metrics
   const metrics = useMemo(() => {
     // Define converted statuses (successful conversions)
@@ -99,12 +110,14 @@ export default function AnalyticsPage() {
     const conversionRate = closedLeads > 0 ? (convertedLeads / closedLeads) * 100 : 0;
     const winRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
 
-    // Only count revenue from converted statuses
+    // Only count revenue from PAID statuses (PAID and PAID_30_DAYS)
+    const paidStatuses = ['PAID', 'PAID_30_DAYS'];
     const totalRevenue = leads
-      .filter((lead) => convertedStatuses.includes(lead.status) && lead.estimatedValue)
-      .reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
+      .filter((lead) => paidStatuses.includes(lead.status))
+      .reduce((sum, lead) => sum + getLeadValue(lead), 0);
 
-    const avgDealSize = convertedLeads > 0 ? totalRevenue / convertedLeads : 0;
+    const paidLeads = leads.filter((lead) => paidStatuses.includes(lead.status)).length;
+    const avgDealSize = paidLeads > 0 ? totalRevenue / paidLeads : 0;
 
     return {
       totalLeads,
@@ -114,7 +127,7 @@ export default function AnalyticsPage() {
       avgDealSize,
       wonLeads: convertedLeads,
     };
-  }, [leads]);
+  }, [leads, getLeadValue]);
 
   // Lead source breakdown data
   const sourceData = useMemo(() => {
@@ -180,15 +193,8 @@ export default function AnalyticsPage() {
 
   // Revenue by month data
   const revenueByMonthData = useMemo(() => {
-    const convertedStatuses = [
-      'CONTRACT_SIGNED',
-      'JOB_SCHEDULED',
-      'JOB_COMPLETED',
-      'INVOICE_SENT',
-      'PAST_DUE_30_DAYS',
-      'PAID',
-      'PAID_30_DAYS'
-    ];
+    // Only count revenue from PAID statuses
+    const paidStatuses = ['PAID', 'PAID_30_DAYS'];
 
     const monthlyRevenue: Record<string, number> = {};
     const now = new Date();
@@ -201,13 +207,15 @@ export default function AnalyticsPage() {
     }
 
     leads
-      .filter((lead) => convertedStatuses.includes(lead.status) && lead.estimatedValue)
+      .filter((lead) => paidStatuses.includes(lead.status))
       .forEach((lead) => {
-        if (lead.createdAt) {
-          const leadDate = new Date(lead.createdAt);
+        // Use updatedAt to determine when lead moved to PAID status
+        const dateField = lead.updatedAt || lead.createdAt;
+        if (dateField) {
+          const leadDate = new Date(dateField);
           const key = leadDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
           if (monthlyRevenue.hasOwnProperty(key)) {
-            monthlyRevenue[key] += lead.estimatedValue || 0;
+            monthlyRevenue[key] += getLeadValue(lead);
           }
         }
       });
@@ -216,7 +224,7 @@ export default function AnalyticsPage() {
       month,
       revenue,
     }));
-  }, [leads]);
+  }, [leads, getLeadValue]);
 
   if (!mounted) {
     return null;

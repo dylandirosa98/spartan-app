@@ -38,7 +38,26 @@ import {
   Eye,
   EyeOff,
   UserCheck,
+  Edit,
+  Trash2,
+  MoreVertical,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface UserFormData {
   username: string;
@@ -71,10 +90,22 @@ export default function MobileUsersPage() {
   const [isFetchingSalesReps, setIsFetchingSalesReps] = useState(false);
   const [isFetchingUsers, setIsFetchingUsers] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<MobileUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [formData, setFormData] = useState<UserFormData>({
+    username: '',
+    password: '',
+    email: '',
+    salesRep: '',
+    role: 'sales_rep',
+  });
+
+  const [editFormData, setEditFormData] = useState<UserFormData>({
     username: '',
     password: '',
     email: '',
@@ -218,6 +249,147 @@ export default function MobileUsersPage() {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Handle open edit dialog
+  const handleOpenEditDialog = (user: MobileUser) => {
+    setSelectedUser(user);
+    setEditFormData({
+      username: user.username,
+      password: '', // Don't populate password for security
+      email: user.email,
+      salesRep: user.sales_rep,
+      role: user.role,
+    });
+    setShowEditDialog(true);
+  };
+
+  // Handle update user
+  const handleUpdateUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      // Validation
+      if (!editFormData.username || !editFormData.email || !editFormData.role) {
+        toast({
+          title: 'Validation Error',
+          description: 'Username, email, and role are required',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Email validation
+      if (!editFormData.email.includes('@')) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please enter a valid email address',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Password validation (if provided)
+      if (editFormData.password && editFormData.password.length < 8) {
+        toast({
+          title: 'Validation Error',
+          description: 'Password must be at least 8 characters',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setIsSaving(true);
+
+      const updatePayload: any = {
+        id: selectedUser.id,
+        username: editFormData.username,
+        email: editFormData.email,
+        role: editFormData.role,
+      };
+
+      // Only include password if it was changed
+      if (editFormData.password) {
+        updatePayload.password = editFormData.password;
+      }
+
+      const response = await fetch('/api/mobile-users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatePayload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: editFormData.password
+            ? `User "${editFormData.username}" updated successfully. They will be logged out.`
+            : `User "${editFormData.username}" updated successfully`,
+        });
+
+        // Close dialog and refresh
+        setShowEditDialog(false);
+        setSelectedUser(null);
+        fetchUsers();
+      } else {
+        throw new Error(data.error || data.message || 'Failed to update user');
+      }
+    } catch (error) {
+      console.error('[Mobile Users] Error updating user:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update user',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle open delete dialog
+  const handleOpenDeleteDialog = (user: MobileUser) => {
+    setSelectedUser(user);
+    setShowDeleteDialog(true);
+  };
+
+  // Handle delete user
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setIsDeleting(true);
+
+      const response = await fetch(`/api/mobile-users?id=${selectedUser.id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: `User "${selectedUser.username}" deleted successfully`,
+        });
+
+        // Close dialog and refresh
+        setShowDeleteDialog(false);
+        setSelectedUser(null);
+        fetchUsers();
+      } else {
+        throw new Error(data.error || data.message || 'Failed to delete user');
+      }
+    } catch (error) {
+      console.error('[Mobile Users] Error deleting user:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete user',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -477,6 +649,7 @@ export default function MobileUsersPage() {
                       <th className="pb-3 font-semibold text-gray-900">Role</th>
                       <th className="pb-3 font-semibold text-gray-900">Status</th>
                       <th className="pb-3 font-semibold text-gray-900">Created</th>
+                      <th className="pb-3 font-semibold text-gray-900 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -517,6 +690,28 @@ export default function MobileUsersPage() {
                             year: 'numeric',
                           })}
                         </td>
+                        <td className="py-4 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleOpenEditDialog(user)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit User
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleOpenDeleteDialog(user)}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete User
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -525,6 +720,153 @@ export default function MobileUsersPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Edit User Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit User</DialogTitle>
+              <DialogDescription>
+                Update user information. Leave password blank to keep current password.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-username">Username *</Label>
+                <Input
+                  id="edit-username"
+                  placeholder="e.g., jimmy_mobile"
+                  value={editFormData.username}
+                  onChange={(e) => setEditFormData({ ...editFormData, username: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-email">Email *</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-password">New Password (optional)</Label>
+                <div className="relative">
+                  <Input
+                    id="edit-password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Leave blank to keep current"
+                    value={editFormData.password}
+                    onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {editFormData.password && (
+                  <p className="text-xs text-orange-600 mt-1">
+                    Changing password will force logout the user from mobile app
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="edit-role">Role *</Label>
+                <Select
+                  value={editFormData.role}
+                  onValueChange={(value) => setEditFormData({ ...editFormData, role: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sales_rep">Sales Rep</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Sales Rep (from Twenty CRM)</Label>
+                <div className="flex items-center gap-2 p-3 border rounded-lg bg-gray-50">
+                  <UserCheck className="h-5 w-5 text-[#C41E3A]" />
+                  <span className="font-medium">{editFormData.salesRep}</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Sales rep cannot be changed
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEditDialog(false);
+                  setSelectedUser(null);
+                }}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateUser}
+                disabled={isSaving}
+                className="bg-[#C41E3A] hover:bg-[#A01828]"
+              >
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update User'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the user &quot;{selectedUser?.username}&quot; and remove their access to the mobile app.
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setSelectedUser(null);
+                }}
+                disabled={isDeleting}
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteUser}
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {isDeleting ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete User'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

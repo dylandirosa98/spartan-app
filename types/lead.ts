@@ -77,6 +77,10 @@ export interface Lead {
   stage?: string; // Twenty CRM stage (e.g., "New", "Contacted", "Qualified", "Proposal", "Won", "Lost")
   notes?: string | null;
   estimatedValue?: number; // Maps to "estValue" in Twenty
+  estValue?: {
+    amountMicros: number;
+    currencyCode: string;
+  } | null; // Twenty CRM Currency type
   roofType?: string;
   propertyType?: PropertyType;
   assignedTo?: string;
