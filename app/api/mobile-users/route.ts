@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, username, password, email, role, workspaceId, twentyApiKey, isActive } = body;
+    const { id, username, password, email, isActive } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -123,17 +123,6 @@ export async function PUT(request: NextRequest) {
 
     if (username !== undefined) updateData.username = username;
     if (email !== undefined) updateData.email = email;
-    if (role !== undefined) {
-      if (!['admin', 'manager', 'sales_rep'].includes(role)) {
-        return NextResponse.json(
-          { error: 'Invalid role. Must be: admin, manager, or sales_rep' },
-          { status: 400 }
-        );
-      }
-      updateData.role = role;
-    }
-    if (workspaceId !== undefined) updateData.workspace_id = workspaceId;
-    if (twentyApiKey !== undefined) updateData.twenty_api_key = twentyApiKey || null;
     if (isActive !== undefined) updateData.is_active = isActive;
 
     // Hash new password if provided
@@ -146,7 +135,7 @@ export async function PUT(request: NextRequest) {
       .from('mobile_users')
       .update(updateData)
       .eq('id', id)
-      .select('id, username, email, role, workspace_id, is_active, created_at, updated_at')
+      .select('id, username, email, role, sales_rep, company_id, is_active, created_at, updated_at')
       .single();
 
     if (error) {

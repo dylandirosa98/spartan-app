@@ -271,10 +271,10 @@ export default function MobileUsersPage() {
 
     try {
       // Validation
-      if (!editFormData.username || !editFormData.email || !editFormData.role) {
+      if (!editFormData.username || !editFormData.email) {
         toast({
           title: 'Validation Error',
-          description: 'Username, email, and role are required',
+          description: 'Username and email are required',
           variant: 'destructive',
         });
         return;
@@ -306,7 +306,6 @@ export default function MobileUsersPage() {
         id: selectedUser.id,
         username: editFormData.username,
         email: editFormData.email,
-        role: editFormData.role,
       };
 
       // Only include password if it was changed
@@ -777,18 +776,15 @@ export default function MobileUsersPage() {
                 )}
               </div>
               <div>
-                <Label htmlFor="edit-role">Role *</Label>
-                <Select
-                  value={editFormData.role}
-                  onValueChange={(value) => setEditFormData({ ...editFormData, role: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sales_rep">Sales Rep</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Role</Label>
+                <div className="flex items-center gap-2 p-3 border rounded-lg bg-gray-50">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {editFormData.role === 'sales_rep' ? 'Sales Rep' : editFormData.role}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Role cannot be changed
+                </p>
               </div>
               <div>
                 <Label>Sales Rep (from Twenty CRM)</Label>
