@@ -150,6 +150,7 @@ export async function GET(request: NextRequest) {
         medium: lead.medium || null,
         notes: lead.notes || null,
         assignedTo: lead.salesRep || null,
+        estValue: lead.estValue || null, // Include Currency field from Twenty CRM
         createdAt: lead.createdAt,
         updatedAt: lead.updatedAt,
         company_id: companyId,
