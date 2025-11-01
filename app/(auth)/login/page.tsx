@@ -105,13 +105,13 @@ export default function LoginPage() {
         <CardHeader className="space-y-1 text-center pb-8 bg-gradient-to-br from-slate-900 to-slate-800 rounded-t-lg">
           <div className="flex justify-center mb-6 pt-6">
             <img
-              src="/arisys-logo.png"
-              alt="Arisys"
+              src="https://ik.imagekit.io/de9yylqdb/spartan-systems_123-removebg-preview.png?updatedAt=1761771143456"
+              alt="Spartan Systems"
               className="h-40 w-auto"
             />
           </div>
           <CardTitle className="text-2xl font-bold text-white">
-            Welcome to Arisys
+            Welcome to Spartan Systems
           </CardTitle>
           <CardDescription className="text-base text-slate-300">
             Roofing CRM Platform - Sign in to continue

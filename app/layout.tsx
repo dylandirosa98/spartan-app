@@ -8,14 +8,14 @@ import type { Metadata } from 'next';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Arisys - Roofing CRM Software',
+  title: 'Spartan Systems - Roofing CRM Software',
   description: 'Multi-company roofing sales CRM platform for managing leads, sales, and operations',
   manifest: '/manifest.json',
   themeColor: '#1e293b',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Arisys',
+    title: 'Spartan Systems',
   },
   viewport: {
     width: 'device-width',

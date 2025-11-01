@@ -1,7 +1,7 @@
 {
-  "name": "arisys",
+  "name": "spartan-systems",
   "version": "1.0.0",
-  "description": "Arisys - Multi-company roofing CRM platform",
+  "description": "Spartan Systems - Multi-company roofing CRM platform",
   "private": true,
   "scripts": {
     "dev": "next dev",

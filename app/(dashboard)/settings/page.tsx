@@ -552,14 +552,14 @@ export default function SettingsPage() {
                   App Information
                 </CardTitle>
                 <CardDescription>
-                  Version and status information for Arisys
+                  Version and status information for Spartan Systems
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between py-3 border-b">
                     <span className="text-sm font-medium text-gray-700">App Name</span>
-                    <span className="text-sm font-semibold text-[#C41E3A]">Arisys</span>
+                    <span className="text-sm font-semibold text-[#C41E3A]">Spartan Systems</span>
                   </div>
                   <div className="flex items-center justify-between py-3 border-b">
                     <span className="text-sm font-medium text-gray-700">Version</span>
@@ -607,11 +607,11 @@ export default function SettingsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>About Arisys</CardTitle>
+                <CardTitle>About Spartan Systems</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-gray-600">
-                  Arisys is an enterprise-grade Progressive Web App designed for
+                  Spartan Systems is an enterprise-grade Progressive Web App designed for
                   roofing companies to manage leads, track opportunities,
                   and seamlessly sync with Twenty CRM.
                 </p>
@@ -621,7 +621,7 @@ export default function SettingsPage() {
                 </p>
                 <div className="pt-2">
                   <p className="text-xs text-gray-500">
-                    &copy; 2024 Arisys. All rights reserved.
+                    &copy; 2024 Spartan Systems. All rights reserved.
                   </p>
                 </div>
               </CardContent>

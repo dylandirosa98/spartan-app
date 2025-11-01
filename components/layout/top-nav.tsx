@@ -22,8 +22,8 @@ export function TopNav() {
         <div className="flex items-center gap-3">
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 px-3 py-2 rounded-md">
             <img
-              src="/arisys-logo.png"
-              alt="Arisys"
+              src="https://ik.imagekit.io/de9yylqdb/spartan-systems_123-removebg-preview.png?updatedAt=1761771143456"
+              alt="Spartan Systems"
               className="h-8 w-auto"
             />
           </div>

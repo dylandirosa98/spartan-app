@@ -13,8 +13,8 @@ export function AdminTopNav() {
         {/* Logo and Brand */}
         <Link href="/admin/dashboard" className="flex items-center gap-3">
           <img
-            src="/arisys-logo.png"
-            alt="Arisys"
+            src="https://ik.imagekit.io/de9yylqdb/spartan-systems_123-removebg-preview.png?updatedAt=1761771143456"
+            alt="Spartan Systems"
             className="h-10 w-auto"
           />
           <div className="hidden md:flex items-center gap-2">
