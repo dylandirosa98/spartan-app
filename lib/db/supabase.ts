@@ -21,9 +21,10 @@ export interface MobileUser {
   username: string;
   password_hash: string;
   email: string;
-  role: 'admin' | 'manager' | 'sales_rep';
-  workspace_id: string;
-  twenty_api_key: string | null;
+  role: 'sales_rep' | 'canvasser' | 'office_manager' | 'project_manager';
+  sales_rep: string | null;
+  canvasser: string | null;
+  company_id: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -33,7 +34,10 @@ export interface MobileUserInsert {
   username: string;
   password_hash: string;
   email: string;
-  role: 'admin' | 'manager' | 'sales_rep';
+  role: 'sales_rep' | 'canvasser' | 'office_manager' | 'project_manager';
+  sales_rep?: string | null;
+  canvasser?: string | null;
+  company_id?: string;
   workspace_id?: string;
   twenty_api_key?: string | null;
   is_active?: boolean;
@@ -43,8 +47,7 @@ export interface MobileUserUpdate {
   username?: string;
   password_hash?: string;
   email?: string;
-  role?: 'admin' | 'manager' | 'sales_rep';
-  workspace_id?: string;
-  twenty_api_key?: string | null;
+  sales_rep?: string | null;
+  canvasser?: string | null;
   is_active?: boolean;
 }

@@ -15,10 +15,25 @@ const registerSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters').max(50),
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  salesRep: z.string().min(1, 'Sales rep is required'),
+  salesRep: z.string().optional(),
+  canvasser: z.string().optional(),
   companyId: z.string().uuid('Invalid company ID'),
-  role: z.enum(['sales_rep'], { errorMap: () => ({ message: 'Role must be sales_rep' }) }),
-});
+  role: z.enum(['sales_rep', 'canvasser', 'office_manager', 'project_manager'], {
+    errorMap: () => ({ message: 'Role must be sales_rep, canvasser, office_manager, or project_manager' })
+  }),
+}).refine(
+  (data) => {
+    // salesRep is required only for sales_rep role
+    if (data.role === 'sales_rep') {
+      return data.salesRep && data.salesRep.length > 0;
+    }
+    return true;
+  },
+  {
+    message: 'Sales rep is required for sales rep role',
+    path: ['salesRep'],
+  }
+);
 
 /**
  * POST /api/mobile-users/register
@@ -40,7 +55,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { username, email, password, salesRep, companyId, role } = validation.data;
+    const { username, email, password, salesRep, canvasser, companyId, role } = validation.data;
 
     // Check if company exists
     const { data: company, error: companyError } = await supabase
@@ -56,32 +71,62 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify that the sales rep exists in Twenty CRM
-    // (We'll fetch available sales reps and validate)
-    const salesRepsResponse = await fetch(
-      `${request.nextUrl.origin}/api/sales-reps?companyId=${companyId}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    // Only verify sales rep exists in Twenty CRM for sales_rep role
+    if (role === 'sales_rep' && salesRep) {
+      const salesRepsResponse = await fetch(
+        `${request.nextUrl.origin}/api/sales-reps?companyId=${companyId}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-    if (!salesRepsResponse.ok) {
-      throw new Error('Failed to fetch sales reps from Twenty CRM');
+      if (!salesRepsResponse.ok) {
+        throw new Error('Failed to fetch sales reps from Twenty CRM');
+      }
+
+      const { salesReps } = await salesRepsResponse.json();
+
+      if (!salesReps.includes(salesRep)) {
+        return NextResponse.json(
+          {
+            error: 'Invalid sales rep',
+            message: `Sales rep "${salesRep}" does not exist in Twenty CRM. Available options: ${salesReps.join(', ')}`,
+            availableSalesReps: salesReps,
+          },
+          { status: 400 }
+        );
+      }
     }
 
-    const { salesReps } = await salesRepsResponse.json();
-
-    if (!salesReps.includes(salesRep)) {
-      return NextResponse.json(
+    // Verify canvasser exists in Twenty CRM for canvasser role (if provided)
+    if (role === 'canvasser' && canvasser) {
+      const canvassersResponse = await fetch(
+        `${request.nextUrl.origin}/api/canvassers?companyId=${companyId}`,
         {
-          error: 'Invalid sales rep',
-          message: `Sales rep "${salesRep}" does not exist in Twenty CRM. Available options: ${salesReps.join(', ')}`,
-          availableSalesReps: salesReps,
-        },
-        { status: 400 }
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       );
+
+      if (!canvassersResponse.ok) {
+        throw new Error('Failed to fetch canvassers from Twenty CRM');
+      }
+
+      const { canvassers } = await canvassersResponse.json();
+
+      if (!canvassers.includes(canvasser)) {
+        return NextResponse.json(
+          {
+            error: 'Invalid canvasser',
+            message: `Canvasser "${canvasser}" does not exist in Twenty CRM. Available options: ${canvassers.join(', ')}`,
+            availableCanvassers: canvassers,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if username already exists
@@ -112,26 +157,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if sales rep already has an account
-    const { data: existingSalesRep } = await supabase
-      .from('mobile_users')
-      .select('id, username')
-      .eq('sales_rep', salesRep)
-      .eq('company_id', companyId)
-      .single();
+    // Check if sales rep already has an account (only for sales_rep role with salesRep value)
+    if (role === 'sales_rep' && salesRep) {
+      const { data: existingSalesRep } = await supabase
+        .from('mobile_users')
+        .select('id, username')
+        .eq('sales_rep', salesRep)
+        .eq('company_id', companyId)
+        .single();
 
-    if (existingSalesRep) {
-      return NextResponse.json(
-        {
-          error: 'Sales rep already has an account',
-          message: `An account already exists for sales rep "${salesRep}" with username "${existingSalesRep.username}"`,
-        },
-        { status: 409 }
-      );
+      if (existingSalesRep) {
+        return NextResponse.json(
+          {
+            error: 'Sales rep already has an account',
+            message: `An account already exists for sales rep "${salesRep}" with username "${existingSalesRep.username}"`,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Check if canvasser already has an account (only for canvasser role with canvasser value)
+    if (role === 'canvasser' && canvasser) {
+      const { data: existingCanvasser } = await supabase
+        .from('mobile_users')
+        .select('id, username')
+        .eq('canvasser', canvasser)
+        .eq('company_id', companyId)
+        .single();
+
+      if (existingCanvasser) {
+        return NextResponse.json(
+          {
+            error: 'Canvasser already has an account',
+            message: `An account already exists for canvasser "${canvasser}" with username "${existingCanvasser.username}"`,
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
+
+    // Only sales_rep role needs a Twenty CRM sales rep
+    // Only canvasser role needs a Twenty CRM canvasser
+    // Other roles (office_manager, project_manager) don't need these fields
+    const salesRepValue = role === 'sales_rep' ? salesRep : null;
+    const canvasserValue = role === 'canvasser' ? (canvasser || null) : null;
 
     // Create mobile user
     const { data: newUser, error: insertError } = await supabase
@@ -140,12 +213,13 @@ export async function POST(request: NextRequest) {
         username,
         email,
         password_hash: passwordHash,
-        sales_rep: salesRep,
+        sales_rep: salesRepValue,
+        canvasser: canvasserValue,
         company_id: companyId,
         role: role,
         is_active: true,
       })
-      .select('id, username, email, sales_rep, company_id, role, created_at')
+      .select('id, username, email, sales_rep, canvasser, company_id, role, created_at')
       .single();
 
     if (insertError) {
@@ -162,6 +236,7 @@ export async function POST(request: NextRequest) {
         username: newUser.username,
         email: newUser.email,
         salesRep: newUser.sales_rep,
+        canvasser: newUser.canvasser,
         companyId: newUser.company_id,
         role: newUser.role,
         createdAt: newUser.created_at,
