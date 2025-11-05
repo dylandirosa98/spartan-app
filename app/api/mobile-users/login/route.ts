@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
         email,
         password_hash,
         sales_rep,
+        canvasser,
         company_id,
         role,
         is_active,
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
       .update({ updated_at: new Date().toISOString() })
       .eq('id', user.id);
 
-    console.log('[Mobile Users API] Login successful:', username, 'Sales Rep:', user.sales_rep);
+    console.log('[Mobile Users API] Login successful:', username, 'Sales Rep:', user.sales_rep, 'Canvasser:', user.canvasser);
 
     // Get company data
     const company = Array.isArray(user.companies) ? user.companies[0] : user.companies;
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
         username: user.username,
         email: user.email,
         salesRep: user.sales_rep,
+        canvasser: user.canvasser,
         companyId: user.company_id,
         role: user.role,
         twentyApiKey: decryptedApiKey,
