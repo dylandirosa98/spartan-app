@@ -86,6 +86,8 @@ export interface Lead {
   assignedTo?: string;
   assigned_to?: string | null; // Supabase field
   salesRep?: string; // Twenty CRM salesRep enum
+  canvasser?: string | null; // Twenty CRM canvasser enum
+  demo?: string | null; // Twenty CRM demo enum (YES, NO, or null)
 
   // UTM Tracking Parameters (from Twenty CRM)
   rawUtmSource?: string | null;
@@ -236,6 +238,8 @@ export const CreateLeadSchema = z.object({
   roofType: z.string().max(100, 'Roof type is too long').optional(),
   propertyType: z.enum(['residential', 'commercial']).optional(),
   assignedTo: z.string().uuid('Invalid assignedTo ID format').optional(),
+  canvasser: z.string().optional(),
+  demo: z.string().optional(),
   photos: z.array(z.string().url('Invalid photo URL')).optional(),
   nextFollowUp: z.string().datetime('Invalid nextFollowUp date format').optional(),
 });

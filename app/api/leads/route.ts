@@ -90,6 +90,8 @@ export async function GET(request: NextRequest) {
               source
               medium
               salesRep
+              canvasser
+              demo
               estValue {
                 amountMicros
                 currencyCode
@@ -148,6 +150,9 @@ export async function GET(request: NextRequest) {
         status: lead.status || null,
         source: lead.source || 'twenty_crm',
         medium: lead.medium || null,
+        salesRep: lead.salesRep || null,
+        canvasser: lead.canvasser || null,
+        demo: lead.demo || null,
         notes: lead.notes || null,
         assignedTo: lead.salesRep || null,
         estValue: lead.estValue || null, // Include Currency field from Twenty CRM

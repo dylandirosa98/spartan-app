@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -51,6 +51,8 @@ const leadFormSchema = z.object({
   roofType: z.string().max(100, 'Roof type is too long').optional(),
   nextFollowUp: z.string().optional(),
   assignedTo: z.string().optional(),
+  canvasser: z.string().optional(),
+  demo: z.string().optional(),
 });
 
 type LeadFormData = z.infer<typeof leadFormSchema>;
@@ -66,6 +68,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
   const { addLead, updateLead } = useLeadStore();
   const { currentUser } = useAuthStore();
   const { toast } = useToast();
+  const [canvassers, setCanvassers] = useState<string[]>([]);
 
   const {
     register,
@@ -93,6 +96,8 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
       roofType: '',
       nextFollowUp: '',
       assignedTo: 'unassigned',
+      canvasser: '',
+      demo: '',
     },
   });
 
@@ -102,6 +107,27 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
   const status = watch('status');
   const propertyType = watch('propertyType');
   const assignedTo = watch('assignedTo');
+  const canvasser = watch('canvasser');
+  const demo = watch('demo');
+
+  // Fetch canvassers from Twenty CRM
+  useEffect(() => {
+    const fetchCanvassers = async () => {
+      if (!currentUser?.company_id) return;
+
+      try {
+        const response = await fetch(`/api/canvassers?companyId=${currentUser.company_id}`);
+        const data = await response.json();
+        if (data.canvassers) {
+          setCanvassers(data.canvassers);
+        }
+      } catch (error) {
+        console.error('Failed to fetch canvassers:', error);
+      }
+    };
+
+    fetchCanvassers();
+  }, [currentUser?.company_id]);
 
   // Populate form when editing
   useEffect(() => {
@@ -125,6 +151,8 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
           ? new Date(lead.nextFollowUp).toISOString().slice(0, 16)
           : '',
         assignedTo: lead.assignedTo || 'unassigned',
+        canvasser: lead.canvasser || '',
+        demo: lead.demo || '',
       });
     } else if (!open) {
       // Reset form with default assignment for salespeople
@@ -145,6 +173,8 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
         roofType: '',
         nextFollowUp: '',
         assignedTo: currentUser?.role === 'salesperson' ? currentUser.id : 'unassigned',
+        canvasser: '',
+        demo: '',
       });
     }
   }, [lead, mode, open, reset, currentUser]);
@@ -168,6 +198,8 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
         roofType: data.roofType || undefined,
         nextFollowUp: data.nextFollowUp ? new Date(data.nextFollowUp).toISOString() : undefined,
         assignedTo: data.assignedTo && data.assignedTo !== 'unassigned' ? data.assignedTo : undefined,
+        canvasser: data.canvasser || undefined,
+        demo: data.demo || undefined,
       };
 
       if (mode === 'edit' && lead) {
@@ -430,6 +462,43 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
                 {currentUser?.role === 'salesperson' && (
                   <p className="text-xs text-gray-500">Salespeople can only assign leads to themselves</p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="canvasser">Canvasser</Label>
+                <Select
+                  value={canvasser}
+                  onValueChange={(value) => setValue('canvasser', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select canvasser" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {canvassers.map((canvasserName) => (
+                      <SelectItem key={canvasserName} value={canvasserName}>
+                        {canvasserName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="demo">Demo</Label>
+                <Select
+                  value={demo}
+                  onValueChange={(value) => setValue('demo', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select demo status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Not Set</SelectItem>
+                    <SelectItem value="YES">Yes</SelectItem>
+                    <SelectItem value="NO">No</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
