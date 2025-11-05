@@ -72,6 +72,8 @@ export async function GET(
           source
           medium
           salesRep
+          canvasser
+          demo
           estValue {
             amountMicros
             currencyCode

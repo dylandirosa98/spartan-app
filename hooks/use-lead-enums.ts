@@ -11,6 +11,8 @@ interface LeadEnums {
   source: EnumValue[];
   medium: EnumValue[];
   salesRep: EnumValue[];
+  canvasser: EnumValue[];
+  demo: EnumValue[];
 }
 
 export function useLeadEnums() {
@@ -63,6 +65,11 @@ export function useLeadEnums() {
         ],
         salesRep: [
           { value: 'UNASSIGNED', label: 'Unassigned' },
+        ],
+        canvasser: [],
+        demo: [
+          { value: 'YES', label: 'Yes' },
+          { value: 'NO', label: 'No' },
         ],
       });
     } finally {

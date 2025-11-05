@@ -75,6 +75,8 @@ export async function GET(request: NextRequest) {
       source: [],
       medium: [],
       salesRep: [],
+      canvasser: [],
+      demo: [],
     };
 
     // Helper to format enum value for display
@@ -105,6 +107,16 @@ export async function GET(request: NextRequest) {
         }));
       } else if (field.name === 'salesRep' && field.type.enumValues) {
         enums.salesRep = field.type.enumValues.map((ev: any) => ({
+          value: ev.name,
+          label: formatEnumLabel(ev.name),
+        }));
+      } else if (field.name === 'canvasser' && field.type.enumValues) {
+        enums.canvasser = field.type.enumValues.map((ev: any) => ({
+          value: ev.name,
+          label: formatEnumLabel(ev.name),
+        }));
+      } else if (field.name === 'demo' && field.type.enumValues) {
+        enums.demo = field.type.enumValues.map((ev: any) => ({
           value: ev.name,
           label: formatEnumLabel(ev.name),
         }));

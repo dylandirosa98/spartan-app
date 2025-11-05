@@ -23,6 +23,8 @@ interface TwentyLead {
   source: string | null;
   medium: string | null;
   salesRep: string | null;
+  canvasser: string | null;
+  demo: string | null;
   estValue: { amountMicros: number; currencyCode: string } | null;
   notes: string | null;
   aiSummary: string | null;
@@ -330,6 +332,22 @@ export function LeadInfoView({ leadId, onEdit: _onEdit }: LeadInfoViewProps) {
           value={lead.salesRep}
           type="select"
           options={enums.salesRep}
+        />
+
+        <EditableField
+          label="Canvasser"
+          field="canvasser"
+          value={lead.canvasser}
+          type="select"
+          options={enums.canvasser}
+        />
+
+        <EditableField
+          label="Demo"
+          field="demo"
+          value={lead.demo}
+          type="select"
+          options={enums.demo}
         />
 
         <div className="group relative">
