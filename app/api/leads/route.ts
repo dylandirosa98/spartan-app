@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
           primaryEmail: leadData.email,
         } : null,
         adress: leadData.address, // Note: Twenty CRM has typo in schema
-        city: leadData.city || null,
+        city: leadData.city || 'N/A', // Twenty CRM requires city field
         status: leadData.status || 'NEW',
         source: leadData.source || 'CANVASS',
         canvasser: leadData.canvasser || null,
