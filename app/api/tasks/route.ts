@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { companyId, leadId, title, body: taskBody, status, dueAt } = body;
+    const { companyId, leadId, title, body: taskBody, status, dueAt, canvassLead } = body;
 
     if (!companyId || !leadId || !title) {
       return NextResponse.json(
@@ -181,6 +181,7 @@ export async function POST(request: NextRequest) {
     }
     if (status) taskData.status = status;
     if (dueAt) taskData.dueAt = dueAt;
+    if (canvassLead !== undefined) taskData.canvassLead = canvassLead;
 
     const data = await (twentyClient as any).request(mutation, {
       taskData: taskData,
