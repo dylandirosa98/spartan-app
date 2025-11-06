@@ -9,25 +9,21 @@ const supabase = createClient(
 );
 
 /**
- * GET /api/tasks?companyId=xxx&leadId=xxx
- * Fetch all tasks associated with a lead from Twenty CRM
+ * GET /api/tasks?companyId=xxx&leadId=xxx&canvassLead=true
+ * Fetch tasks from Twenty CRM
+ * - If leadId provided: fetch tasks for that specific lead
+ * - If canvassLead=true: fetch all tasks with canvassLead=true
  */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const companyId = searchParams.get('companyId');
     const leadId = searchParams.get('leadId');
+    const canvassLead = searchParams.get('canvassLead');
 
     if (!companyId) {
       return NextResponse.json(
         { error: 'companyId is required' },
-        { status: 400 }
-      );
-    }
-
-    if (!leadId) {
-      return NextResponse.json(
-        { error: 'leadId is required' },
         { status: 400 }
       );
     }
@@ -55,15 +51,15 @@ export async function GET(request: NextRequest) {
       decryptedApiKey
     );
 
-    // Query tasks associated with the lead
-    // Note: Tasks use taskTargets similar to how Notes use noteTargets
-    const query = `
-      query GetTasksForLead($leadId: UUID!) {
-        taskTargets(filter: { leadId: { eq: $leadId } }, orderBy: { createdAt: DescNullsLast }) {
-          edges {
-            node {
-              id
-              task {
+    let data;
+
+    if (canvassLead === 'true') {
+      // Fetch all tasks with canvassLead=true
+      const query = `
+        query GetCanvassLeadTasks {
+          tasks(filter: { canvassLead: { eq: true } }, orderBy: { createdAt: DescNullsLast }) {
+            edges {
+              node {
                 id
                 title
                 bodyV2 {
@@ -71,27 +67,90 @@ export async function GET(request: NextRequest) {
                 }
                 status
                 dueAt
+                canvassLead
                 createdAt
                 updatedAt
-                assignee {
-                  id
-                  name {
-                    firstName
-                    lastName
+              }
+            }
+          }
+        }
+      `;
+
+      data = await (twentyClient as any).request(query);
+
+      // Transform and return tasks with their lead IDs from taskTargets
+      const tasksWithLeads = await Promise.all(
+        (data.tasks?.edges || []).map(async (edge: any) => {
+          const task = edge.node;
+
+          // Fetch taskTargets to get the leadId
+          const targetQuery = `
+            query GetTaskTargets($taskId: UUID!) {
+              taskTargets(filter: { taskId: { eq: $taskId } }) {
+                edges {
+                  node {
+                    leadId
                   }
                 }
-                createdBy {
-                  source
-                  name
+              }
+            }
+          `;
+
+          const targetData = await (twentyClient as any).request(targetQuery, { taskId: task.id });
+          const leadId = targetData.taskTargets?.edges?.[0]?.node?.leadId || null;
+
+          return {
+            ...task,
+            body: task.bodyV2?.markdown || null,
+            leadId,
+          };
+        })
+      );
+
+      return NextResponse.json({ tasks: tasksWithLeads });
+    } else if (leadId) {
+      // Query tasks associated with a specific lead
+      const query = `
+        query GetTasksForLead($leadId: UUID!) {
+          taskTargets(filter: { leadId: { eq: $leadId } }, orderBy: { createdAt: DescNullsLast }) {
+            edges {
+              node {
+                id
+                task {
+                  id
+                  title
+                  bodyV2 {
+                    markdown
+                  }
+                  status
+                  dueAt
+                  createdAt
+                  updatedAt
+                  assignee {
+                    id
+                    name {
+                      firstName
+                      lastName
+                    }
+                  }
+                  createdBy {
+                    source
+                    name
+                  }
                 }
               }
             }
           }
         }
-      }
-    `;
+      `;
 
-    const data = await (twentyClient as any).request(query, { leadId });
+      data = await (twentyClient as any).request(query, { leadId });
+    } else {
+      return NextResponse.json(
+        { error: 'Either leadId or canvassLead parameter is required' },
+        { status: 400 }
+      );
+    }
 
     console.log('[Tasks API] Fetched tasks for lead:', leadId);
 
