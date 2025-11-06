@@ -202,12 +202,14 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/leads
- * Create a new lead
+ * Create a new lead in Twenty CRM
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { company_id, ...leadData } = body;
+
+    console.log('[Leads API POST] Received data:', { company_id, leadData });
 
     if (!company_id) {
       return NextResponse.json(
@@ -216,54 +218,105 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Transform field names to Supabase schema
-    const supabaseData = {
-      company_id,
-      name: leadData.name,
-      phone: leadData.phone,
-      email: leadData.email || null,
-      address: leadData.address,
-      city: leadData.city,
-      state: leadData.state,
-      zip_code: leadData.zipCode || leadData.zip_code,
-      status: leadData.status || 'new',
-      notes: leadData.notes || null,
-      source: leadData.source || 'website',
-      // Note: medium field doesn't exist in Supabase leads table
-      // Note: assigned_to expects UUID reference to users table, setting to null for now
-      assigned_to: null,
-    };
-
-    const { data, error } = await supabase
-      .from('leads')
-      .insert([supabaseData])
-      .select()
+    // Get company configuration to access Twenty CRM
+    const { data: company, error: companyError } = await supabaseClient
+      .from('companies')
+      .select('twenty_api_url, twenty_api_key')
+      .eq('id', company_id)
       .single();
 
-    if (error) {
-      console.error('[Leads API] Create error:', error);
+    if (companyError || !company) {
+      console.error('[Leads API POST] Company fetch error:', companyError);
       return NextResponse.json(
-        { error: 'Failed to create lead', details: error.message },
-        { status: 500 }
+        { error: 'Company not found' },
+        { status: 404 }
       );
     }
 
-    // Transform back to frontend format
+    // Decrypt API key
+    const decryptedApiKey = decrypt(company.twenty_api_key);
+
+    // Create Twenty CRM client
+    const twentyClient = new TwentyCRMClient(
+      company.twenty_api_url,
+      decryptedApiKey
+    );
+
+    // Create lead in Twenty CRM via GraphQL mutation
+    const mutation = `
+      mutation CreateLead($data: LeadCreateInput!) {
+        createLead(data: $data) {
+          id
+          name
+          phone {
+            primaryPhoneNumber
+          }
+          email {
+            primaryEmail
+          }
+          adress
+          city
+          status
+          source
+          canvasser
+          appointmentTime
+          notes
+          createdAt
+        }
+      }
+    `;
+
+    const variables = {
+      data: {
+        name: leadData.name,
+        phone: {
+          primaryPhoneNumber: leadData.phone,
+        },
+        email: leadData.email ? {
+          primaryEmail: leadData.email,
+        } : null,
+        adress: leadData.address, // Note: Twenty CRM has typo in schema
+        city: leadData.city || null,
+        status: leadData.status || 'NEW',
+        source: leadData.source || 'CANVASS',
+        canvasser: leadData.canvasser || null,
+        appointmentTime: leadData.appointmentTime || null,
+        notes: leadData.notes || null,
+      },
+    };
+
+    console.log('[Leads API POST] Creating lead in Twenty CRM with variables:', variables);
+
+    const result = await (twentyClient as any).request(mutation, variables);
+
+    console.log('[Leads API POST] Twenty CRM response:', result);
+
+    const createdLead = result.createLead;
+
+    // Transform to frontend format
     const transformedLead = {
-      ...data,
-      twentyId: data.twenty_id,
-      zipCode: data.zip_code,
-      assignedTo: data.assigned_to,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
+      id: createdLead.id,
+      twentyId: createdLead.id,
+      name: createdLead.name,
+      phone: createdLead.phone?.primaryPhoneNumber || null,
+      email: createdLead.email?.primaryEmail || null,
+      address: createdLead.adress || null,
+      city: createdLead.city || null,
+      status: createdLead.status || null,
+      source: createdLead.source || null,
+      canvasser: createdLead.canvasser || null,
+      appointmentTime: createdLead.appointmentTime || null,
+      notes: createdLead.notes || null,
+      createdAt: createdLead.createdAt,
     };
 
     return NextResponse.json({ lead: transformedLead }, { status: 201 });
 
-  } catch (error) {
-    console.error('[Leads API] Error:', error);
+  } catch (error: any) {
+    console.error('[Leads API POST] Error:', error);
+    console.error('[Leads API POST] Error details:', error.message);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to create lead', details: error.message },
       { status: 500 }
     );
   }
