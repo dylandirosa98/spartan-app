@@ -283,3 +283,94 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+/**
+ * PATCH /api/tasks
+ * Update an existing task in Twenty CRM
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, companyId, dueAt, title, body: taskBody, status } = body;
+
+    if (!companyId || !id) {
+      return NextResponse.json(
+        { error: 'companyId and id are required' },
+        { status: 400 }
+      );
+    }
+
+    // Get company configuration
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('twenty_api_url, twenty_api_key')
+      .eq('id', companyId)
+      .single();
+
+    if (companyError || !company) {
+      return NextResponse.json(
+        { error: 'Company not found' },
+        { status: 404 }
+      );
+    }
+
+    // Decrypt API key
+    const decryptedApiKey = decrypt(company.twenty_api_key);
+
+    // Create Twenty CRM client
+    const twentyClient = new TwentyCRMClient(
+      company.twenty_api_url,
+      decryptedApiKey
+    );
+
+    // Build update payload
+    const updateData: any = {};
+
+    if (dueAt !== undefined) updateData.dueAt = dueAt;
+    if (title !== undefined) updateData.title = title;
+    if (status !== undefined) updateData.status = status;
+    if (taskBody !== undefined) {
+      updateData.bodyV2 = {
+        markdown: taskBody + '\n',
+        blocknote: `[{"type":"paragraph","content":[{"type":"text","text":"${taskBody.replace(/"/g, '\\"')}"}]}]`,
+      };
+    }
+
+    // Update task mutation
+    const mutation = `
+      mutation UpdateTask($taskId: ID!, $taskData: TaskUpdateInput!) {
+        updateTask(id: $taskId, data: $taskData) {
+          id
+          title
+          bodyV2 {
+            markdown
+          }
+          status
+          dueAt
+          updatedAt
+        }
+      }
+    `;
+
+    const data = await (twentyClient as any).request(mutation, {
+      taskId: id,
+      taskData: updateData,
+    });
+
+    console.log('[Tasks API] Updated task:', data.updateTask);
+
+    return NextResponse.json({
+      success: true,
+      task: data.updateTask,
+    });
+  } catch (error) {
+    console.error('[Tasks API] Error updating task:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to update task in Twenty CRM',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
