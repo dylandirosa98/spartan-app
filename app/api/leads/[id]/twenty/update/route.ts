@@ -114,6 +114,7 @@ export async function PATCH(
           notes
           aiSummary
           appointmentTime
+          demo
           updatedAt
         }
       }
