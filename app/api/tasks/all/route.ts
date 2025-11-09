@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
                 }
                 status
                 dueAt
+                canvassLead
                 createdAt
                 updatedAt
                 assignee {
