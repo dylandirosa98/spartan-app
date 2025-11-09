@@ -90,13 +90,16 @@ export async function GET(request: NextRequest) {
     console.log('[Tasks All API] Fetched all tasks');
 
     // Transform the data to include lead information
-    let tasks = data.taskTargets?.edges?.map((edge: any) => ({
-      ...edge.node.task,
-      body: edge.node.task.bodyV2?.markdown || null,
-      leadId: edge.node.lead?.id || null,
-      leadName: edge.node.lead?.name || null,
-      leadSalesRep: edge.node.lead?.salesRep || null,
-    })) || [];
+    // Filter out taskTargets without tasks (orphaned records)
+    let tasks = data.taskTargets?.edges
+      ?.filter((edge: any) => edge.node.task != null)
+      ?.map((edge: any) => ({
+        ...edge.node.task,
+        body: edge.node.task.bodyV2?.markdown || null,
+        leadId: edge.node.lead?.id || null,
+        leadName: edge.node.lead?.name || null,
+        leadSalesRep: edge.node.lead?.salesRep || null,
+      })) || [];
 
     // Filter by sales rep if provided
     if (salesRep) {
