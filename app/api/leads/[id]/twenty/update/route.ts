@@ -21,6 +21,8 @@ export async function PATCH(
     const body = await request.json();
     const { companyId, updates } = body;
 
+    console.log('[Twenty Update] Received request:', { leadId, companyId, updates });
+
     if (!companyId) {
       return NextResponse.json(
         { error: 'companyId is required' },
@@ -88,6 +90,8 @@ export async function PATCH(
       }
     }
 
+    console.log('[Twenty Update] Transformed updates for Twenty CRM:', transformedUpdates);
+
     // Build GraphQL mutation
     const mutation = `
       mutation UpdateLead($leadId: UUID!, $data: LeadUpdateInput!) {
@@ -120,19 +124,22 @@ export async function PATCH(
       }
     `;
 
+    console.log('[Twenty Update] Sending mutation to Twenty CRM with variables:', { leadId, data: transformedUpdates });
+
     const data = await (twentyClient as any).request(mutation, {
       leadId,
       data: transformedUpdates,
     });
 
-    console.log('[Twenty Update API] Lead updated:', data.updateLead);
+    console.log('[Twenty Update] Response from Twenty CRM:', JSON.stringify(data.updateLead, null, 2));
 
     return NextResponse.json({
       success: true,
       lead: data.updateLead,
     });
   } catch (error) {
-    console.error('[Twenty Update API] Error:', error);
+    console.error('[Twenty Update] Error:', error);
+    console.error('[Twenty Update] Error details:', JSON.stringify(error, null, 2));
     return NextResponse.json(
       {
         error: 'Failed to update lead in Twenty CRM',
