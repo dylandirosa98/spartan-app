@@ -225,6 +225,40 @@ export default function MobileUsersPage() {
       const data = await response.json();
 
       if (response.ok) {
+        // If office manager, update assignments
+        if (formData.role === 'office_manager') {
+          const currentlyAssigned = users.filter(u => u.officeManager === selectedUser.username).map(u => u.id);
+          const newlySelected = [
+            ...(formData.selectedSalesReps || []),
+            ...(formData.selectedCanvassers || [])
+          ];
+
+          // Clear users who are no longer assigned
+          const toUnassign = currentlyAssigned.filter(id => !newlySelected.includes(id));
+          for (const userId of toUnassign) {
+            await fetch('/api/mobile-users', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: userId,
+                officeManager: null,
+              }),
+            });
+          }
+
+          // Assign newly selected users
+          for (const userId of newlySelected) {
+            await fetch('/api/mobile-users', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: userId,
+                officeManager: formData.username,
+              }),
+            });
+          }
+        }
+
         toast({
           title: 'Success',
           description: `User "${formData.username}" updated successfully`,
@@ -292,6 +326,15 @@ export default function MobileUsersPage() {
   // Open edit dialog
   const openEditDialog = (user: MobileUser) => {
     setSelectedUser(user);
+
+    // Pre-populate assigned users if this is an office manager
+    const assignedSalesReps = user.role === 'office_manager'
+      ? users.filter(u => u.role === 'sales_rep' && u.officeManager === user.username).map(u => u.id)
+      : [];
+    const assignedCanvassers = user.role === 'office_manager'
+      ? users.filter(u => u.role === 'canvasser' && u.officeManager === user.username).map(u => u.id)
+      : [];
+
     setFormData({
       username: user.username,
       password: '', // Don't pre-fill password for security
@@ -299,6 +342,10 @@ export default function MobileUsersPage() {
       role: user.role,
       workspaceId: user.workspaceId,
       twentyApiKey: '',
+      salesRep: user.salesRep || undefined,
+      canvasser: user.canvasser || undefined,
+      selectedSalesReps: assignedSalesReps,
+      selectedCanvassers: assignedCanvassers,
     });
     setShowEditDialog(true);
   };
@@ -685,9 +732,78 @@ export default function MobileUsersPage() {
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="manager">Manager</SelectItem>
                     <SelectItem value="sales_rep">Sales Rep</SelectItem>
+                    <SelectItem value="canvasser">Canvasser</SelectItem>
+                    <SelectItem value="office_manager">Office Manager</SelectItem>
+                    <SelectItem value="project_manager">Project Manager</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Office Manager Assignments */}
+              {formData.role === 'office_manager' && (
+                <>
+                  <div>
+                    <Label>Assign Sales Reps</Label>
+                    <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
+                      {users
+                        .filter(u => u.role === 'sales_rep')
+                        .map(user => (
+                          <label key={user.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={formData.selectedSalesReps?.includes(user.id)}
+                              onChange={(e) => {
+                                const selected = formData.selectedSalesReps || [];
+                                setFormData({
+                                  ...formData,
+                                  selectedSalesReps: e.target.checked
+                                    ? [...selected, user.id]
+                                    : selected.filter(id => id !== user.id)
+                                });
+                              }}
+                              className="rounded"
+                            />
+                            <span className="text-sm">{user.username} ({user.email})</span>
+                          </label>
+                        ))}
+                      {users.filter(u => u.role === 'sales_rep').length === 0 && (
+                        <p className="text-sm text-gray-500">No sales reps available</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Assign Canvassers</Label>
+                    <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
+                      {users
+                        .filter(u => u.role === 'canvasser')
+                        .map(user => (
+                          <label key={user.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={formData.selectedCanvassers?.includes(user.id)}
+                              onChange={(e) => {
+                                const selected = formData.selectedCanvassers || [];
+                                setFormData({
+                                  ...formData,
+                                  selectedCanvassers: e.target.checked
+                                    ? [...selected, user.id]
+                                    : selected.filter(id => id !== user.id)
+                                });
+                              }}
+                              className="rounded"
+                            />
+                            <span className="text-sm">{user.username} ({user.email})</span>
+                          </label>
+                        ))}
+                      {users.filter(u => u.role === 'canvasser').length === 0 && (
+                        <p className="text-sm text-gray-500">No canvassers available</p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div>
                 <Label htmlFor="edit-workspaceId">Workspace ID</Label>
                 <Input
