@@ -24,6 +24,7 @@ export interface MobileUser {
   role: 'sales_rep' | 'canvasser' | 'office_manager' | 'project_manager';
   sales_rep: string | null;
   canvasser: string | null;
+  office_manager: string | null;
   company_id: string;
   is_active: boolean;
   created_at: string;
@@ -37,6 +38,7 @@ export interface MobileUserInsert {
   role: 'sales_rep' | 'canvasser' | 'office_manager' | 'project_manager';
   sales_rep?: string | null;
   canvasser?: string | null;
+  office_manager?: string | null;
   company_id?: string;
   workspace_id?: string;
   twenty_api_key?: string | null;
@@ -49,5 +51,6 @@ export interface MobileUserUpdate {
   email?: string;
   sales_rep?: string | null;
   canvasser?: string | null;
+  office_manager?: string | null;
   is_active?: boolean;
 }

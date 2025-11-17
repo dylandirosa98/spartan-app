@@ -9,7 +9,7 @@ export async function GET(_request: NextRequest) {
     // Fetch all users from Supabase
     const { data: users, error } = await supabase
       .from('mobile_users')
-      .select('id, username, email, role, sales_rep, canvasser, company_id, is_active, created_at, updated_at')
+      .select('id, username, email, role, sales_rep, canvasser, office_manager, company_id, is_active, created_at, updated_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, username, password, email, isActive, salesRep, canvasser } = body;
+    const { id, username, password, email, isActive, salesRep, canvasser, officeManager } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -133,13 +133,14 @@ export async function PUT(request: NextRequest) {
     // Update role-specific fields
     if (salesRep !== undefined) updateData.sales_rep = salesRep;
     if (canvasser !== undefined) updateData.canvasser = canvasser;
+    if (officeManager !== undefined) updateData.office_manager = officeManager;
 
     // Update in Supabase
     const { data: updatedUser, error } = await supabase
       .from('mobile_users')
       .update(updateData)
       .eq('id', id)
-      .select('id, username, email, role, sales_rep, canvasser, company_id, is_active, created_at, updated_at')
+      .select('id, username, email, role, sales_rep, canvasser, office_manager, company_id, is_active, created_at, updated_at')
       .single();
 
     if (error) {
