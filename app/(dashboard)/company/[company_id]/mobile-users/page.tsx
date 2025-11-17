@@ -85,6 +85,14 @@ interface BasicUserFormData {
   email: string;
 }
 
+interface OfficeManagerFormData {
+  username: string;
+  password: string;
+  email: string;
+  selectedSalesReps: string[];
+  selectedCanvassers: string[];
+}
+
 interface MobileUser {
   id: string;
   username: string;
@@ -92,6 +100,7 @@ interface MobileUser {
   role: string;
   sales_rep: string | null;
   canvasser: string | null;
+  office_manager: string | null;
   company_id: string;
   is_active: boolean;
   created_at: string;
@@ -150,10 +159,12 @@ export default function MobileUsersPage() {
     canvasser: '',
   });
 
-  const [officeManagerFormData, setOfficeManagerFormData] = useState<BasicUserFormData>({
+  const [officeManagerFormData, setOfficeManagerFormData] = useState<OfficeManagerFormData>({
     username: '',
     password: '',
     email: '',
+    selectedSalesReps: [],
+    selectedCanvassers: [],
   });
 
   const [projectManagerFormData, setProjectManagerFormData] = useState<BasicUserFormData>({
@@ -338,6 +349,27 @@ export default function MobileUsersPage() {
       const data = await response.json();
 
       if (response.ok) {
+        // If office manager, assign selected users
+        if (role === 'office_manager') {
+          const officeManagerData = formData as OfficeManagerFormData;
+          const assignedUsers = [
+            ...(officeManagerData.selectedSalesReps || []),
+            ...(officeManagerData.selectedCanvassers || [])
+          ];
+
+          // Update each assigned user's officeManager field
+          for (const userId of assignedUsers) {
+            await fetch('/api/mobile-users', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: userId,
+                officeManager: formData.username,
+              }),
+            });
+          }
+        }
+
         toast({
           title: 'Success',
           description: `${formatRoleName(role)} user "${formData.username}" created successfully`,
@@ -387,7 +419,7 @@ export default function MobileUsersPage() {
     createUserWithRole(
       'office_manager',
       officeManagerFormData,
-      () => setOfficeManagerFormData({ username: '', password: '', email: '' }),
+      () => setOfficeManagerFormData({ username: '', password: '', email: '', selectedSalesReps: [], selectedCanvassers: [] }),
       () => setShowOfficeManagerDialog(false)
     );
   };
@@ -1124,6 +1156,63 @@ export default function MobileUsersPage() {
                         value={officeManagerFormData.email}
                         onChange={(e) => setOfficeManagerFormData({ ...officeManagerFormData, email: e.target.value })}
                       />
+                    </div>
+
+                    {/* Assignment Fields */}
+                    <div>
+                      <Label>Assign Sales Reps</Label>
+                      <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
+                        {getUsersByRole('sales_rep').map(user => (
+                          <label key={user.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={officeManagerFormData.selectedSalesReps?.includes(user.id)}
+                              onChange={(e) => {
+                                const selected = officeManagerFormData.selectedSalesReps || [];
+                                setOfficeManagerFormData({
+                                  ...officeManagerFormData,
+                                  selectedSalesReps: e.target.checked
+                                    ? [...selected, user.id]
+                                    : selected.filter(id => id !== user.id)
+                                });
+                              }}
+                              className="rounded"
+                            />
+                            <span className="text-sm">{user.username} ({user.email})</span>
+                          </label>
+                        ))}
+                        {getUsersByRole('sales_rep').length === 0 && (
+                          <p className="text-sm text-gray-500">No sales reps available</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Assign Canvassers</Label>
+                      <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
+                        {getUsersByRole('canvasser').map(user => (
+                          <label key={user.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={officeManagerFormData.selectedCanvassers?.includes(user.id)}
+                              onChange={(e) => {
+                                const selected = officeManagerFormData.selectedCanvassers || [];
+                                setOfficeManagerFormData({
+                                  ...officeManagerFormData,
+                                  selectedCanvassers: e.target.checked
+                                    ? [...selected, user.id]
+                                    : selected.filter(id => id !== user.id)
+                                });
+                              }}
+                              className="rounded"
+                            />
+                            <span className="text-sm">{user.username} ({user.email})</span>
+                          </label>
+                        ))}
+                        {getUsersByRole('canvasser').length === 0 && (
+                          <p className="text-sm text-gray-500">No canvassers available</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <DialogFooter>
