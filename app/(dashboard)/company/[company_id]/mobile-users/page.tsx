@@ -1730,7 +1730,7 @@ export default function MobileUsersPage() {
                               // Handle assignment change
                               const newAssignments = e.target.checked
                                 ? [...(editFormData.selectedSalesReps || []), user.id]
-                                : (editFormData.selectedSalesReps || []).filter(id => id !== user.id);
+                                : (editFormData.selectedSalesReps || []).filter((id: string) => id !== user.id);
                               setEditFormData({
                                 ...editFormData,
                                 selectedSalesReps: newAssignments
@@ -1759,7 +1759,7 @@ export default function MobileUsersPage() {
                               // Handle assignment change
                               const newAssignments = e.target.checked
                                 ? [...(editFormData.selectedCanvassers || []), user.id]
-                                : (editFormData.selectedCanvassers || []).filter(id => id !== user.id);
+                                : (editFormData.selectedCanvassers || []).filter((id: string) => id !== user.id);
                               setEditFormData({
                                 ...editFormData,
                                 selectedCanvassers: newAssignments
