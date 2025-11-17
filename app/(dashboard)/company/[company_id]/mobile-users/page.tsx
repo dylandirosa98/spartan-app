@@ -180,6 +180,8 @@ export default function MobileUsersPage() {
     salesRep: '',
     canvasser: '',
     role: 'sales_rep',
+    selectedSalesReps: [],
+    selectedCanvassers: [],
   });
 
   // Fetch sales reps from Twenty CRM
@@ -513,6 +515,40 @@ export default function MobileUsersPage() {
       const data = await response.json();
 
       if (response.ok) {
+        // If office manager, update assignments
+        if (editFormData.role === 'office_manager') {
+          const currentlyAssigned = users.filter(u => u.office_manager === selectedUser.username).map(u => u.id);
+          const newlySelected = [
+            ...(editFormData.selectedSalesReps || []),
+            ...(editFormData.selectedCanvassers || [])
+          ];
+
+          // Clear users who are no longer assigned
+          const toUnassign = currentlyAssigned.filter((id: string) => !newlySelected.includes(id));
+          for (const userId of toUnassign) {
+            await fetch('/api/mobile-users', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: userId,
+                officeManager: null,
+              }),
+            });
+          }
+
+          // Assign newly selected users
+          for (const userId of newlySelected) {
+            await fetch('/api/mobile-users', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: userId,
+                officeManager: editFormData.username,
+              }),
+            });
+          }
+        }
+
         toast({
           title: 'Success',
           description: editFormData.password
@@ -1677,6 +1713,69 @@ export default function MobileUsersPage() {
                     You can change the assigned canvasser or leave unassigned
                   </p>
                 </div>
+              )}
+
+              {/* Office Manager Assignment Fields */}
+              {editFormData.role === 'office_manager' && selectedUser && (
+                <>
+                  <div>
+                    <Label>Assign Sales Reps</Label>
+                    <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
+                      {getUsersByRole('sales_rep').map(user => (
+                        <label key={user.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={user.office_manager === selectedUser.username}
+                            onChange={(e) => {
+                              // Handle assignment change
+                              const newAssignments = e.target.checked
+                                ? [...(editFormData.selectedSalesReps || []), user.id]
+                                : (editFormData.selectedSalesReps || []).filter(id => id !== user.id);
+                              setEditFormData({
+                                ...editFormData,
+                                selectedSalesReps: newAssignments
+                              });
+                            }}
+                            className="rounded"
+                          />
+                          <span className="text-sm">{user.username} ({user.email})</span>
+                        </label>
+                      ))}
+                      {getUsersByRole('sales_rep').length === 0 && (
+                        <p className="text-sm text-gray-500">No sales reps available</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Assign Canvassers</Label>
+                    <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
+                      {getUsersByRole('canvasser').map(user => (
+                        <label key={user.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={user.office_manager === selectedUser.username}
+                            onChange={(e) => {
+                              // Handle assignment change
+                              const newAssignments = e.target.checked
+                                ? [...(editFormData.selectedCanvassers || []), user.id]
+                                : (editFormData.selectedCanvassers || []).filter(id => id !== user.id);
+                              setEditFormData({
+                                ...editFormData,
+                                selectedCanvassers: newAssignments
+                              });
+                            }}
+                            className="rounded"
+                          />
+                          <span className="text-sm">{user.username} ({user.email})</span>
+                        </label>
+                      ))}
+                      {getUsersByRole('canvasser').length === 0 && (
+                        <p className="text-sm text-gray-500">No canvassers available</p>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
             <DialogFooter>
