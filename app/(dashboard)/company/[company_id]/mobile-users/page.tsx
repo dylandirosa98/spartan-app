@@ -438,6 +438,15 @@ export default function MobileUsersPage() {
   // Handle open edit dialog
   const handleOpenEditDialog = (user: MobileUser) => {
     setSelectedUser(user);
+
+    // Pre-populate assigned users if this is an office manager
+    const assignedSalesReps = user.role === 'office_manager'
+      ? users.filter(u => u.role === 'sales_rep' && u.office_manager === user.username).map(u => u.id)
+      : [];
+    const assignedCanvassers = user.role === 'office_manager'
+      ? users.filter(u => u.role === 'canvasser' && u.office_manager === user.username).map(u => u.id)
+      : [];
+
     setEditFormData({
       username: user.username,
       password: '', // Don't populate password for security
@@ -445,6 +454,8 @@ export default function MobileUsersPage() {
       salesRep: user.sales_rep || '',
       canvasser: user.canvasser || '',
       role: user.role,
+      selectedSalesReps: assignedSalesReps,
+      selectedCanvassers: assignedCanvassers,
     });
     setShowEditDialog(true);
   };
@@ -1725,7 +1736,7 @@ export default function MobileUsersPage() {
                         <label key={user.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={user.office_manager === selectedUser.username}
+                            checked={editFormData.selectedSalesReps?.includes(user.id) || false}
                             onChange={(e) => {
                               // Handle assignment change
                               const newAssignments = e.target.checked
@@ -1754,7 +1765,7 @@ export default function MobileUsersPage() {
                         <label key={user.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={user.office_manager === selectedUser.username}
+                            checked={editFormData.selectedCanvassers?.includes(user.id) || false}
                             onChange={(e) => {
                               // Handle assignment change
                               const newAssignments = e.target.checked
