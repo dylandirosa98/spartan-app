@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
-import { decrypt } from '@/lib/api/encryption';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,40 +43,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get company Twenty CRM credentials
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .select('twenty_api_url, twenty_api_key')
-      .eq('id', companyId)
-      .single();
-
-    if (companyError || !company) {
-      console.error('[Office Manager Team Member API] Error fetching company:', companyError);
-      return NextResponse.json(
-        { error: 'Failed to fetch company credentials' },
-        { status: 500 }
-      );
-    }
-
-    // Decrypt API key
-    const twentyApiKey = decrypt(company.twenty_api_key);
-    const twentyApiUrl = company.twenty_api_url;
-
-    // Fetch all people (leads) from Twenty CRM
-    const { data: allPeople } = await axios.get(
-      `${twentyApiUrl}/people`,
+    // Fetch all leads using the existing /api/leads endpoint
+    const { data: leadsResponse } = await axios.get(
+      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/leads`,
       {
-        headers: {
-          Authorization: `Bearer ${twentyApiKey}`,
+        params: {
+          company_id: companyId,
         },
       }
     );
 
+    const allLeads = leadsResponse.leads || [];
+
     // Get leads assigned to this team member
     const memberName = member.sales_rep || member.canvasser;
-    const memberLeads = (allPeople?.data?.people || []).filter((person: any) => {
-      const assignedTo = person.assignedCanvasser?.name || person.salesRep?.name;
-      return assignedTo === memberName;
+    const memberLeads = allLeads.filter((lead: any) => {
+      return lead.salesRep === memberName || lead.canvasser === memberName;
     });
 
     // Calculate performance metrics

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
-import { decrypt } from '@/lib/api/encryption';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,25 +50,6 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get company Twenty CRM credentials
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .select('twenty_api_url, twenty_api_key')
-      .eq('id', companyId)
-      .single();
-
-    if (companyError || !company) {
-      console.error('[Office Manager Activity API] Error fetching company:', companyError);
-      return NextResponse.json(
-        { error: 'Failed to fetch company credentials' },
-        { status: 500 }
-      );
-    }
-
-    // Decrypt API key
-    const twentyApiKey = decrypt(company.twenty_api_key);
-    const twentyApiUrl = company.twenty_api_url;
-
     // Get sales rep and canvasser names from team members
     const salesRepNames = teamMembers
       .filter((member) => member.role === 'sales_rep' && member.sales_rep)
@@ -79,50 +59,52 @@ export async function GET(request: NextRequest) {
       .filter((member) => member.role === 'canvasser' && member.canvasser)
       .map((member) => member.canvasser);
 
-    // Fetch all people (leads) from Twenty CRM
-    const { data: allPeople } = await axios.get(
-      `${twentyApiUrl}/people`,
+    // Fetch all leads using the existing /api/leads endpoint
+    const { data: leadsResponse } = await axios.get(
+      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/leads`,
       {
-        headers: {
-          Authorization: `Bearer ${twentyApiKey}`,
+        params: {
+          company_id: companyId,
         },
       }
     );
+
+    const allLeads = leadsResponse.leads || [];
 
     // Filter to team members' leads and get recent updates
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const recentActivity = (allPeople?.data?.people || [])
-      .filter((person: any) => {
-        const assignedTo = person.assignedCanvasser?.name || person.salesRep?.name;
-        const hasRecentUpdate = person.updatedAt && new Date(person.updatedAt) >= thirtyDaysAgo;
-        return (
-          hasRecentUpdate &&
-          (salesRepNames.includes(assignedTo) || canvasserNames.includes(assignedTo))
+    const recentActivity = allLeads
+      .filter((lead: any) => {
+        const belongsToTeam = (
+          salesRepNames.includes(lead.salesRep) ||
+          canvasserNames.includes(lead.canvasser)
         );
+        const hasRecentUpdate = lead.updatedAt && new Date(lead.updatedAt) >= thirtyDaysAgo;
+        return hasRecentUpdate && belongsToTeam;
       })
       .sort((a: any, b: any) => {
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       })
       .slice(0, limit)
-      .map((person: any) => {
-        const assignedTo = person.assignedCanvasser?.name || person.salesRep?.name;
+      .map((lead: any) => {
+        const assignedTo = lead.salesRep || lead.canvasser;
         const teamMember = teamMembers.find(
           (m) => m.sales_rep === assignedTo || m.canvasser === assignedTo
         );
 
         return {
-          leadId: person.id,
-          leadName: `${person.name?.firstName || ''} ${person.name?.lastName || ''}`.trim(),
-          leadStatus: person.status,
+          leadId: lead.id,
+          leadName: lead.name || '',
+          leadStatus: lead.status,
           assignedTo,
           assigneeRole: teamMember?.role,
           assigneeEmail: teamMember?.email,
-          updatedAt: person.updatedAt,
-          createdAt: person.createdAt,
-          appointmentDate: person.appointmentDate,
-          address: person.address,
+          updatedAt: lead.updatedAt,
+          createdAt: lead.createdAt,
+          appointmentDate: lead.appointmentDate,
+          address: lead.address,
         };
       });
 

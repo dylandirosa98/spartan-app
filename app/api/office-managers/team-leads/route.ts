@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
-import { decrypt } from '@/lib/api/encryption';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,25 +24,6 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Get company Twenty CRM credentials
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .select('twenty_api_url, twenty_api_key')
-      .eq('id', companyId)
-      .single();
-
-    if (companyError || !company) {
-      console.error('[Office Manager Team Leads API] Error fetching company:', companyError);
-      return NextResponse.json(
-        { error: 'Failed to fetch company credentials' },
-        { status: 500 }
-      );
-    }
-
-    // Decrypt API key
-    const twentyApiKey = decrypt(company.twenty_api_key);
-    const twentyApiUrl = company.twenty_api_url;
 
     // Get all team members assigned to this office manager
     const { data: teamMembers, error: teamError } = await supabase
@@ -79,22 +59,23 @@ export async function GET(request: NextRequest) {
       .filter((member) => member.role === 'canvasser' && member.canvasser)
       .map((member) => member.canvasser);
 
-    // Fetch all people (leads) from Twenty CRM
-    const { data: allPeople } = await axios.get(
-      `${twentyApiUrl}/people`,
+    // Fetch all leads using the existing /api/leads endpoint
+    const { data: leadsResponse } = await axios.get(
+      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/leads`,
       {
-        headers: {
-          Authorization: `Bearer ${twentyApiKey}`,
+        params: {
+          company_id: companyId,
         },
       }
     );
 
+    const allLeads = leadsResponse.leads || [];
+
     // Filter to only show leads from assigned team members
-    const teamLeads = (allPeople?.data?.people || []).filter((person: any) => {
-      const assignedTo = person.assignedCanvasser?.name || person.salesRep?.name;
+    const teamLeads = allLeads.filter((lead: any) => {
       return (
-        salesRepNames.includes(assignedTo) ||
-        canvasserNames.includes(assignedTo)
+        salesRepNames.includes(lead.salesRep) ||
+        canvasserNames.includes(lead.canvasser)
       );
     });
 
