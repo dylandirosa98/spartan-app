@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     // Calculate performance metrics
     const totalLeads = memberLeads.length;
     const leadsWithAppointments = memberLeads.filter((lead: any) => lead.appointmentDate).length;
-    const appointmentRate = totalLeads > 0 ? ((leadsWithAppointments / totalLeads) * 100).toFixed(1) : 0;
+    const appointmentRate = totalLeads > 0 ? ((leadsWithAppointments / totalLeads) * 100).toFixed(1) : '0';
 
     // Count by status
     const statusBreakdown: Record<string, number> = {};
