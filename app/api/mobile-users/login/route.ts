@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { decrypt } from '@/lib/api/encryption';
+import { TwentyCRMClient } from '@/lib/api/twenty-crm';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
@@ -97,6 +99,17 @@ export async function POST(request: NextRequest) {
     // Get company data
     const company = Array.isArray(user.companies) ? user.companies[0] : user.companies;
 
+    // Decrypt the API key before sending to mobile app
+    let decryptedApiKey = null;
+    if (company?.twenty_api_key) {
+      try {
+        decryptedApiKey = decrypt(company.twenty_api_key);
+        console.log('[Mobile Users API] Successfully decrypted Twenty API key');
+      } catch (error) {
+        console.error('[Mobile Users API] Failed to decrypt Twenty API key:', error);
+      }
+    }
+
     // Return user data (excluding password hash)
     return NextResponse.json({
       success: true,
@@ -109,6 +122,7 @@ export async function POST(request: NextRequest) {
         officeManager: user.office_manager,
         companyId: user.company_id,
         role: user.role,
+        twentyApiKey: decryptedApiKey,
         twentyApiUrl: company?.twenty_api_url || null,
       },
     });
