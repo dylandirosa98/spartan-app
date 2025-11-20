@@ -266,24 +266,33 @@ export async function POST(request: NextRequest) {
       }
     `;
 
-    const variables = {
-      data: {
-        name: leadData.name,
-        phone: {
-          primaryPhoneNumber: leadData.phone,
-        },
-        email: leadData.email ? {
-          primaryEmail: leadData.email,
-        } : null,
-        adress: leadData.address, // Note: Twenty CRM has typo in schema
-        city: leadData.city || 'N/A', // Twenty CRM requires city field
-        status: leadData.status || 'NEW',
-        source: leadData.source || 'CANVASS',
-        canvasser: leadData.canvasser || null,
-        appointmentTime: leadData.appointmentTime || null,
-        notes: leadData.notes || null,
+    // Build the data object, only including fields that have values
+    const data: any = {
+      name: leadData.name,
+      phone: {
+        primaryPhoneNumber: leadData.phone,
       },
+      adress: leadData.address, // Note: Twenty CRM has typo in schema
+      city: leadData.city || 'N/A', // Twenty CRM requires city field
+      status: leadData.status || 'NEW',
+      source: leadData.source || 'CANVASS',
     };
+
+    // Only add optional fields if they have values
+    if (leadData.email) {
+      data.email = { primaryEmail: leadData.email };
+    }
+    if (leadData.canvasser) {
+      data.canvasser = leadData.canvasser;
+    }
+    if (leadData.appointmentTime) {
+      data.appointmentTime = leadData.appointmentTime;
+    }
+    if (leadData.notes) {
+      data.notes = leadData.notes;
+    }
+
+    const variables = { data };
 
     console.log('[Leads API POST] Creating lead in Twenty CRM with variables:', variables);
 
