@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { decrypt } from '@/lib/api/encryption';
-import { TwentyCRMClient } from '@/lib/api/twenty-crm';
+
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
