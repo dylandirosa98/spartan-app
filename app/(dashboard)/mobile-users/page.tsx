@@ -135,26 +135,34 @@ export default function MobileUsersPage() {
   // Fetch Twenty CRM enum values
   const fetchTwentyCRMEnums = async () => {
     try {
-      // Get the default company ID (assuming single company setup)
-      // In production, you might want to get this from the current user context
-      const defaultCompanyId = '00000000-0000-0000-0000-000000000001';
+      // First, fetch the actual company ID from the database
+      const companiesResponse = await fetch('/api/companies');
+      let companyId = '00000000-0000-0000-0000-000000000001'; // fallback
+
+      if (companiesResponse.ok) {
+        const companiesData = await companiesResponse.json();
+        if (companiesData.companies && companiesData.companies.length > 0) {
+          companyId = companiesData.companies[0].id;
+          console.log('[Mobile Users] Using company ID:', companyId);
+        }
+      }
 
       // Fetch sales reps
-      const salesRepsResponse = await fetch(`/api/sales-reps?companyId=${defaultCompanyId}`);
+      const salesRepsResponse = await fetch(`/api/sales-reps?companyId=${companyId}`);
       if (salesRepsResponse.ok) {
         const data = await salesRepsResponse.json();
         setAvailableSalesReps(data.salesReps || []);
       }
 
       // Fetch canvassers
-      const canvassersResponse = await fetch(`/api/canvassers?companyId=${defaultCompanyId}`);
+      const canvassersResponse = await fetch(`/api/canvassers?companyId=${companyId}`);
       if (canvassersResponse.ok) {
         const data = await canvassersResponse.json();
         setAvailableCanvassers(data.canvassers || []);
       }
 
       // Fetch office managers
-      const officeManagersResponse = await fetch(`/api/office-managers?companyId=${defaultCompanyId}`);
+      const officeManagersResponse = await fetch(`/api/office-managers?companyId=${companyId}`);
       if (officeManagersResponse.ok) {
         const data = await officeManagersResponse.json();
         console.log('[Mobile Users] Available office managers:', data.officeManagers);
@@ -554,21 +562,31 @@ export default function MobileUsersPage() {
                   {formData.role === 'office_manager' && (
                     <div>
                       <Label htmlFor="officeManagerEnum">Twenty CRM Office Manager Assignment *</Label>
-                      <Select
-                        value={formData.officeManager}
-                        onValueChange={(value) => setFormData({ ...formData, officeManager: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Twenty CRM office manager" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableOfficeManagers.map((manager) => (
-                            <SelectItem key={manager} value={manager}>
-                              {manager}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {availableOfficeManagers.length > 0 ? (
+                        <Select
+                          value={formData.officeManager}
+                          onValueChange={(value) => setFormData({ ...formData, officeManager: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Twenty CRM office manager" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableOfficeManagers.map((manager) => (
+                              <SelectItem key={manager} value={manager}>
+                                {manager}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="border border-red-300 bg-red-50 text-red-700 rounded-md p-3 text-sm">
+                          <strong>No office managers found in Twenty CRM.</strong>
+                          <br />
+                          Please ensure office manager enum values are defined in Twenty CRM.
+                          <br />
+                          <span className="text-xs">Check console for company ID being used.</span>
+                        </div>
+                      )}
                       <p className="text-xs text-gray-500 mt-1">
                         This links the user to a specific office manager value in Twenty CRM
                       </p>
@@ -902,21 +920,31 @@ export default function MobileUsersPage() {
               {formData.role === 'office_manager' && (
                 <div>
                   <Label htmlFor="edit-officeManagerEnum">Twenty CRM Office Manager Assignment *</Label>
-                  <Select
-                    value={formData.officeManager}
-                    onValueChange={(value) => setFormData({ ...formData, officeManager: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Twenty CRM office manager" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableOfficeManagers.map((manager) => (
-                        <SelectItem key={manager} value={manager}>
-                          {manager}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {availableOfficeManagers.length > 0 ? (
+                    <Select
+                      value={formData.officeManager}
+                      onValueChange={(value) => setFormData({ ...formData, officeManager: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Twenty CRM office manager" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableOfficeManagers.map((manager) => (
+                          <SelectItem key={manager} value={manager}>
+                            {manager}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="border border-red-300 bg-red-50 text-red-700 rounded-md p-3 text-sm">
+                      <strong>No office managers found in Twenty CRM.</strong>
+                      <br />
+                      Please ensure office manager enum values are defined in Twenty CRM.
+                      <br />
+                      <span className="text-xs">Check console for company ID being used.</span>
+                    </div>
+                  )}
                   <p className="text-xs text-gray-500 mt-1">
                     This links the user to a specific office manager value in Twenty CRM
                   </p>
