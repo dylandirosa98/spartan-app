@@ -261,6 +261,8 @@ export async function POST(request: NextRequest) {
           status
           source
           canvasser
+          officeManager
+          salesRep
           appointmentTime
           notes
           createdAt
@@ -286,6 +288,12 @@ export async function POST(request: NextRequest) {
     }
     if (leadData.canvasser) {
       data.canvasser = leadData.canvasser;
+    }
+    if (leadData.officeManager) {
+      data.officeManager = leadData.officeManager;
+    }
+    if (leadData.salesRep) {
+      data.salesRep = leadData.salesRep;
     }
     if (leadData.appointmentTime) {
       data.appointmentTime = leadData.appointmentTime;
@@ -316,6 +324,8 @@ export async function POST(request: NextRequest) {
       status: createdLead.status || null,
       source: createdLead.source || null,
       canvasser: createdLead.canvasser || null,
+      officeManager: createdLead.officeManager || null,
+      salesRep: createdLead.salesRep || null,
       appointmentTime: createdLead.appointmentTime || null,
       notes: createdLead.notes || null,
       createdAt: createdLead.createdAt,
