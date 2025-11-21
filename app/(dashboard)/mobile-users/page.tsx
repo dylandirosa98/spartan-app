@@ -478,14 +478,14 @@ export default function MobileUsersPage() {
                   Add User
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create Mobile App User</DialogTitle>
                   <DialogDescription>
                     Add a new user who can access the Spartan CRM mobile app
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-2">
                   <div>
                     <Label htmlFor="username">Username *</Label>
                     <Input
@@ -548,11 +548,6 @@ export default function MobileUsersPage() {
                         <SelectItem value="project_manager">Project Manager</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  {/* Debug: Show current role value */}
-                  <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
-                    Debug: Current role = "{formData.role}" | Available OMs = {availableOfficeManagers.length}
                   </div>
 
                   {/* Twenty CRM Enum Assignment - REQUIRED FIELDS */}
@@ -833,14 +828,14 @@ export default function MobileUsersPage() {
 
         {/* Edit User Dialog */}
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit User</DialogTitle>
               <DialogDescription>
                 Update user information and credentials
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-2">
               <div>
                 <Label htmlFor="edit-username">Username</Label>
                 <Input
@@ -901,11 +896,6 @@ export default function MobileUsersPage() {
                     <SelectItem value="project_manager">Project Manager</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              {/* Debug: Show current role value */}
-              <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
-                Debug Edit: Current role = "{formData.role}" | Available OMs = {availableOfficeManagers.length}
               </div>
 
               {/* Twenty CRM Enum Assignment - REQUIRED FIELDS */}
