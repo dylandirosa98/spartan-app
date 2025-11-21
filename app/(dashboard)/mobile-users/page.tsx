@@ -71,8 +71,9 @@ interface UserFormData {
   role: 'admin' | 'manager' | 'sales_rep' | 'canvasser' | 'office_manager' | 'project_manager';
   workspaceId: string;
   twentyApiKey: string;
-  salesRep?: string;
-  canvasser?: string;
+  salesRep?: string; // Twenty CRM sales rep enum value
+  canvasser?: string; // Twenty CRM canvasser enum value
+  officeManager?: string; // Twenty CRM office manager enum value
   selectedSalesReps?: string[];
   selectedCanvassers?: string[];
 }
@@ -87,6 +88,11 @@ export default function MobileUsersPage() {
   const [selectedUser, setSelectedUser] = useState<MobileUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Twenty CRM enum values
+  const [availableCanvassers, setAvailableCanvassers] = useState<string[]>([]);
+  const [availableSalesReps, setAvailableSalesReps] = useState<string[]>([]);
+  const [availableOfficeManagers, setAvailableOfficeManagers] = useState<string[]>([]);
 
   const [formData, setFormData] = useState<UserFormData>({
     username: '',
@@ -123,8 +129,41 @@ export default function MobileUsersPage() {
     }
   };
 
+  // Fetch Twenty CRM enum values
+  const fetchTwentyCRMEnums = async () => {
+    try {
+      // Get the default company ID (assuming single company setup)
+      // In production, you might want to get this from the current user context
+      const defaultCompanyId = '00000000-0000-0000-0000-000000000001';
+
+      // Fetch sales reps
+      const salesRepsResponse = await fetch(`/api/sales-reps?companyId=${defaultCompanyId}`);
+      if (salesRepsResponse.ok) {
+        const data = await salesRepsResponse.json();
+        setAvailableSalesReps(data.salesReps || []);
+      }
+
+      // Fetch canvassers
+      const canvassersResponse = await fetch(`/api/canvassers?companyId=${defaultCompanyId}`);
+      if (canvassersResponse.ok) {
+        const data = await canvassersResponse.json();
+        setAvailableCanvassers(data.canvassers || []);
+      }
+
+      // Fetch office managers
+      const officeManagersResponse = await fetch(`/api/office-managers?companyId=${defaultCompanyId}`);
+      if (officeManagersResponse.ok) {
+        const data = await officeManagersResponse.json();
+        setAvailableOfficeManagers(data.officeManagers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching Twenty CRM enums:', error);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchTwentyCRMEnums();
   }, []);
 
   // Handle create user
@@ -135,6 +174,34 @@ export default function MobileUsersPage() {
         toast({
           title: 'Validation Error',
           description: 'Please fill in all required fields',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Validate Twenty CRM enum fields are set for specific roles
+      if (formData.role === 'office_manager' && !formData.officeManager) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please select a Twenty CRM office manager assignment',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (formData.role === 'sales_rep' && !formData.salesRep) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please select a Twenty CRM sales rep assignment',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (formData.role === 'canvasser' && !formData.canvasser) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please select a Twenty CRM canvasser assignment',
           variant: 'destructive',
         });
         return;
@@ -184,6 +251,9 @@ export default function MobileUsersPage() {
           role: 'sales_rep',
           workspaceId: 'default',
           twentyApiKey: '',
+          salesRep: undefined,
+          canvasser: undefined,
+          officeManager: undefined,
           selectedSalesReps: [],
           selectedCanvassers: [],
         });
@@ -344,6 +414,7 @@ export default function MobileUsersPage() {
       twentyApiKey: '',
       salesRep: user.salesRep || undefined,
       canvasser: user.canvasser || undefined,
+      officeManager: user.officeManager || undefined,
       selectedSalesReps: assignedSalesReps,
       selectedCanvassers: assignedCanvassers,
     });
@@ -468,7 +539,80 @@ export default function MobileUsersPage() {
                     </Select>
                   </div>
 
-                  {/* Office Manager Assignments */}
+                  {/* Twenty CRM Enum Assignment - REQUIRED FIELDS */}
+                  {formData.role === 'office_manager' && (
+                    <div>
+                      <Label htmlFor="officeManagerEnum">Twenty CRM Office Manager Assignment *</Label>
+                      <Select
+                        value={formData.officeManager}
+                        onValueChange={(value) => setFormData({ ...formData, officeManager: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Twenty CRM office manager" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableOfficeManagers.map((manager) => (
+                            <SelectItem key={manager} value={manager}>
+                              {manager}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        This links the user to a specific office manager value in Twenty CRM
+                      </p>
+                    </div>
+                  )}
+
+                  {formData.role === 'sales_rep' && (
+                    <div>
+                      <Label htmlFor="salesRepEnum">Twenty CRM Sales Rep Assignment *</Label>
+                      <Select
+                        value={formData.salesRep}
+                        onValueChange={(value) => setFormData({ ...formData, salesRep: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Twenty CRM sales rep" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableSalesReps.map((rep) => (
+                            <SelectItem key={rep} value={rep}>
+                              {rep}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        This links the user to a specific sales rep value in Twenty CRM
+                      </p>
+                    </div>
+                  )}
+
+                  {formData.role === 'canvasser' && (
+                    <div>
+                      <Label htmlFor="canvasserEnum">Twenty CRM Canvasser Assignment *</Label>
+                      <Select
+                        value={formData.canvasser}
+                        onValueChange={(value) => setFormData({ ...formData, canvasser: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Twenty CRM canvasser" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableCanvassers.map((canvasser) => (
+                            <SelectItem key={canvasser} value={canvasser}>
+                              {canvasser}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        This links the user to a specific canvasser value in Twenty CRM
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Office Manager Team Assignments */}
                   {formData.role === 'office_manager' && (
                     <>
                       <div>
@@ -739,7 +883,80 @@ export default function MobileUsersPage() {
                 </Select>
               </div>
 
-              {/* Office Manager Assignments */}
+              {/* Twenty CRM Enum Assignment - REQUIRED FIELDS */}
+              {formData.role === 'office_manager' && (
+                <div>
+                  <Label htmlFor="edit-officeManagerEnum">Twenty CRM Office Manager Assignment *</Label>
+                  <Select
+                    value={formData.officeManager}
+                    onValueChange={(value) => setFormData({ ...formData, officeManager: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Twenty CRM office manager" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableOfficeManagers.map((manager) => (
+                        <SelectItem key={manager} value={manager}>
+                          {manager}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    This links the user to a specific office manager value in Twenty CRM
+                  </p>
+                </div>
+              )}
+
+              {formData.role === 'sales_rep' && (
+                <div>
+                  <Label htmlFor="edit-salesRepEnum">Twenty CRM Sales Rep Assignment *</Label>
+                  <Select
+                    value={formData.salesRep}
+                    onValueChange={(value) => setFormData({ ...formData, salesRep: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Twenty CRM sales rep" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSalesReps.map((rep) => (
+                        <SelectItem key={rep} value={rep}>
+                          {rep}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    This links the user to a specific sales rep value in Twenty CRM
+                  </p>
+                </div>
+              )}
+
+              {formData.role === 'canvasser' && (
+                <div>
+                  <Label htmlFor="edit-canvasserEnum">Twenty CRM Canvasser Assignment *</Label>
+                  <Select
+                    value={formData.canvasser}
+                    onValueChange={(value) => setFormData({ ...formData, canvasser: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Twenty CRM canvasser" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableCanvassers.map((canvasser) => (
+                        <SelectItem key={canvasser} value={canvasser}>
+                          {canvasser}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    This links the user to a specific canvasser value in Twenty CRM
+                  </p>
+                </div>
+              )}
+
+              {/* Office Manager Team Assignments */}
               {formData.role === 'office_manager' && (
                 <>
                   <div>

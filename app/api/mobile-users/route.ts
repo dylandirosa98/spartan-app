@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, password, email, role, workspaceId, twentyApiKey } = body;
+    const { username, password, email, role, workspaceId, twentyApiKey, salesRep, canvasser, officeManager } = body;
 
     // Validation
     if (!username || !password || !email || !role) {
@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate role
-    if (!['admin', 'manager', 'sales_rep'].includes(role)) {
+    if (!['admin', 'manager', 'sales_rep', 'canvasser', 'office_manager', 'project_manager'].includes(role)) {
       return NextResponse.json(
-        { error: 'Invalid role. Must be: admin, manager, or sales_rep' },
+        { error: 'Invalid role. Must be: admin, manager, sales_rep, canvasser, office_manager, or project_manager' },
         { status: 400 }
       );
     }
@@ -61,6 +61,9 @@ export async function POST(request: NextRequest) {
       workspace_id: workspaceId || 'default',
       twenty_api_key: twentyApiKey || null,
       is_active: true,
+      sales_rep: salesRep || null,
+      canvasser: canvasser || null,
+      office_manager: officeManager || null,
     };
 
     // Insert into Supabase
@@ -109,7 +112,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, username, password, email, isActive, salesRep, canvasser, officeManager } = body;
+    const { id, username, password, email, role, isActive, salesRep, canvasser, officeManager } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -123,6 +126,7 @@ export async function PUT(request: NextRequest) {
 
     if (username !== undefined) updateData.username = username;
     if (email !== undefined) updateData.email = email;
+    if (role !== undefined) updateData.role = role;
     if (isActive !== undefined) updateData.is_active = isActive;
 
     // Hash new password if provided

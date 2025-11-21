@@ -21,7 +21,7 @@ export interface MobileUser {
   username: string;
   password_hash: string;
   email: string;
-  role: 'sales_rep' | 'canvasser' | 'office_manager' | 'project_manager';
+  role: 'admin' | 'manager' | 'sales_rep' | 'canvasser' | 'office_manager' | 'project_manager';
   sales_rep: string | null;
   canvasser: string | null;
   office_manager: string | null;
@@ -35,7 +35,7 @@ export interface MobileUserInsert {
   username: string;
   password_hash: string;
   email: string;
-  role: 'sales_rep' | 'canvasser' | 'office_manager' | 'project_manager';
+  role: 'admin' | 'manager' | 'sales_rep' | 'canvasser' | 'office_manager' | 'project_manager';
   sales_rep?: string | null;
   canvasser?: string | null;
   office_manager?: string | null;
@@ -49,6 +49,7 @@ export interface MobileUserUpdate {
   username?: string;
   password_hash?: string;
   email?: string;
+  role?: 'admin' | 'manager' | 'sales_rep' | 'canvasser' | 'office_manager' | 'project_manager';
   sales_rep?: string | null;
   canvasser?: string | null;
   office_manager?: string | null;
