@@ -91,6 +91,7 @@ export async function GET(request: NextRequest) {
               medium
               salesRep
               canvasser
+              officeManager
               demo
               estValue {
                 amountMicros
@@ -152,6 +153,7 @@ export async function GET(request: NextRequest) {
         medium: lead.medium || null,
         salesRep: lead.salesRep || null,
         canvasser: lead.canvasser || null,
+        officeManager: lead.officeManager || null,
         demo: lead.demo || null,
         notes: lead.notes || null,
         assignedTo: lead.salesRep || null,

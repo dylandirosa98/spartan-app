@@ -52,6 +52,7 @@ const leadFormSchema = z.object({
   nextFollowUp: z.string().optional(),
   assignedTo: z.string().optional(),
   canvasser: z.string().optional(),
+  officeManager: z.string().optional(),
   demo: z.string().optional(),
 });
 
@@ -69,6 +70,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
   const { currentUser } = useAuthStore();
   const { toast } = useToast();
   const [canvassers, setCanvassers] = useState<string[]>([]);
+  const [officeManagers, setOfficeManagers] = useState<string[]>([]);
 
   const {
     register,
@@ -97,6 +99,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
       nextFollowUp: '',
       assignedTo: 'unassigned',
       canvasser: '',
+      officeManager: '',
       demo: '',
     },
   });
@@ -108,6 +111,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
   const propertyType = watch('propertyType');
   const assignedTo = watch('assignedTo');
   const canvasser = watch('canvasser');
+  const officeManager = watch('officeManager');
   const demo = watch('demo');
 
   // Fetch canvassers from Twenty CRM
@@ -127,6 +131,25 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
     };
 
     fetchCanvassers();
+  }, [currentUser?.company_id]);
+
+  // Fetch office managers from Twenty CRM
+  useEffect(() => {
+    const fetchOfficeManagers = async () => {
+      if (!currentUser?.company_id) return;
+
+      try {
+        const response = await fetch(`/api/office-managers?companyId=${currentUser.company_id}`);
+        const data = await response.json();
+        if (data.officeManagers) {
+          setOfficeManagers(data.officeManagers);
+        }
+      } catch (error) {
+        console.error('Failed to fetch office managers:', error);
+      }
+    };
+
+    fetchOfficeManagers();
   }, [currentUser?.company_id]);
 
   // Populate form when editing
@@ -152,6 +175,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
           : '',
         assignedTo: lead.assignedTo || 'unassigned',
         canvasser: lead.canvasser || '',
+        officeManager: lead.officeManager || '',
         demo: lead.demo || '',
       });
     } else if (!open) {
@@ -174,6 +198,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
         nextFollowUp: '',
         assignedTo: currentUser?.role === 'salesperson' ? currentUser.id : 'unassigned',
         canvasser: '',
+        officeManager: '',
         demo: '',
       });
     }
@@ -199,6 +224,7 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
         nextFollowUp: data.nextFollowUp ? new Date(data.nextFollowUp).toISOString() : undefined,
         assignedTo: data.assignedTo && data.assignedTo !== 'unassigned' ? data.assignedTo : undefined,
         canvasser: data.canvasser || undefined,
+        officeManager: data.officeManager || undefined,
         demo: data.demo || undefined,
       };
 
@@ -478,6 +504,26 @@ export function LeadDialog({ open, onOpenChange, lead, mode = 'create' }: LeadDi
                     {canvassers.map((canvasserName) => (
                       <SelectItem key={canvasserName} value={canvasserName}>
                         {canvasserName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="officeManager">Office Manager</Label>
+                <Select
+                  value={officeManager}
+                  onValueChange={(value) => setValue('officeManager', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select office manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {officeManagers.map((managerName) => (
+                      <SelectItem key={managerName} value={managerName}>
+                        {managerName}
                       </SelectItem>
                     ))}
                   </SelectContent>
