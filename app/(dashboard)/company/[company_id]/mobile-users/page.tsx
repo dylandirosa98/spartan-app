@@ -183,6 +183,7 @@ export default function MobileUsersPage() {
     email: '',
     salesRep: '',
     canvasser: '',
+    officeManager: '',
     role: 'sales_rep',
     selectedSalesReps: [],
     selectedCanvassers: [],
@@ -500,6 +501,7 @@ export default function MobileUsersPage() {
       email: user.email,
       salesRep: user.sales_rep || '',
       canvasser: user.canvasser || '',
+      officeManager: user.office_manager || '',
       role: user.role,
       selectedSalesReps: assignedSalesReps,
       selectedCanvassers: assignedCanvassers,
@@ -562,6 +564,10 @@ export default function MobileUsersPage() {
 
       if (editFormData.role === 'canvasser') {
         updatePayload.canvasser = editFormData.canvasser || null;
+      }
+
+      if (editFormData.role === 'office_manager') {
+        updatePayload.officeManager = editFormData.officeManager;
       }
 
       const response = await fetch('/api/mobile-users', {
@@ -1805,6 +1811,35 @@ export default function MobileUsersPage() {
               {/* Office Manager Assignment Fields */}
               {editFormData.role === 'office_manager' && selectedUser && (
                 <>
+                  {/* Office Manager Assignment */}
+                  <div>
+                    <Label htmlFor="edit-office-manager">Office Manager Assignment *</Label>
+                    <Select
+                      value={editFormData.officeManager || ''}
+                      onValueChange={(value) => setEditFormData({ ...editFormData, officeManager: value })}
+                      disabled={isFetchingOfficeManagers}
+                    >
+                      <SelectTrigger id="edit-office-manager">
+                        <SelectValue placeholder={isFetchingOfficeManagers ? "Loading..." : "Select office manager"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {officeManagers.length === 0 && !isFetchingOfficeManagers && (
+                          <div className="px-2 py-1.5 text-sm text-gray-500">
+                            No office managers available in Twenty CRM
+                          </div>
+                        )}
+                        {officeManagers.map((om) => (
+                          <SelectItem key={om} value={om}>
+                            {om}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      This office manager will only see leads with this value in Twenty CRM
+                    </p>
+                  </div>
+
                   <div>
                     <Label>Assign Sales Reps</Label>
                     <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
