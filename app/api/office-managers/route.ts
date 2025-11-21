@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     // Introspection query to get enum values for officeManager field
     const introspectionQuery = `
       query GetOfficeManagerEnum {
-        __type(name: "LeadOfficemanagerEnum") {
+        __type(name: "LeadOfficeManagerEnum") {
           name
           enumValues {
             name
