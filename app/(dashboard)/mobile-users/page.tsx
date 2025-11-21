@@ -101,6 +101,9 @@ export default function MobileUsersPage() {
     role: 'sales_rep',
     workspaceId: 'default',
     twentyApiKey: '',
+    salesRep: undefined,
+    canvasser: undefined,
+    officeManager: undefined,
     selectedSalesReps: [],
     selectedCanvassers: [],
   });
@@ -154,7 +157,10 @@ export default function MobileUsersPage() {
       const officeManagersResponse = await fetch(`/api/office-managers?companyId=${defaultCompanyId}`);
       if (officeManagersResponse.ok) {
         const data = await officeManagersResponse.json();
+        console.log('[Mobile Users] Available office managers:', data.officeManagers);
         setAvailableOfficeManagers(data.officeManagers || []);
+      } else {
+        console.error('[Mobile Users] Failed to fetch office managers:', officeManagersResponse.status);
       }
     } catch (error) {
       console.error('Error fetching Twenty CRM enums:', error);
@@ -209,6 +215,7 @@ export default function MobileUsersPage() {
 
       setIsSaving(true);
 
+      console.log('[Mobile Users] Creating user with data:', formData);
       const response = await fetch('/api/mobile-users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

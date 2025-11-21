@@ -33,6 +33,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { username, password, email, role, workspaceId, twentyApiKey, salesRep, canvasser, officeManager } = body;
 
+    console.log('[Mobile Users API] Received data:', {
+      username,
+      email,
+      role,
+      salesRep,
+      canvasser,
+      officeManager
+    });
+
     // Validation
     if (!username || !password || !email || !role) {
       return NextResponse.json(
