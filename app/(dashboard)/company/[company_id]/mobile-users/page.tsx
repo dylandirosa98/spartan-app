@@ -89,6 +89,7 @@ interface OfficeManagerFormData {
   username: string;
   password: string;
   email: string;
+  officeManager: string; // Twenty CRM office manager enum value
   selectedSalesReps: string[];
   selectedCanvassers: string[];
 }
@@ -125,9 +126,11 @@ export default function MobileUsersPage() {
 
   const [salesReps, setSalesReps] = useState<string[]>([]);
   const [canvassers, setCanvassers] = useState<string[]>([]);
+  const [officeManagers, setOfficeManagers] = useState<string[]>([]);
   const [users, setUsers] = useState<MobileUser[]>([]);
   const [isFetchingSalesReps, setIsFetchingSalesReps] = useState(false);
   const [isFetchingCanvassers, setIsFetchingCanvassers] = useState(false);
+  const [isFetchingOfficeManagers, setIsFetchingOfficeManagers] = useState(false);
   const [isFetchingUsers, setIsFetchingUsers] = useState(false);
   const [activeTab, setActiveTab] = useState('sales_rep');
 
@@ -163,6 +166,7 @@ export default function MobileUsersPage() {
     username: '',
     password: '',
     email: '',
+    officeManager: '',
     selectedSalesReps: [],
     selectedCanvassers: [],
   });
@@ -238,6 +242,33 @@ export default function MobileUsersPage() {
     }
   };
 
+  // Fetch office managers from Twenty CRM
+  const fetchOfficeManagers = async () => {
+    if (!companyId) return;
+
+    try {
+      setIsFetchingOfficeManagers(true);
+      const response = await fetch(`/api/office-managers?companyId=${companyId}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch office managers');
+      }
+
+      const data = await response.json();
+      setOfficeManagers(data.officeManagers || []);
+      console.log('[Mobile Users] Fetched office managers:', data.officeManagers);
+    } catch (error) {
+      console.error('[Mobile Users] Error fetching office managers:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load office manager options from Twenty CRM',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsFetchingOfficeManagers(false);
+    }
+  };
+
   // Fetch mobile users
   const fetchUsers = async () => {
     try {
@@ -267,6 +298,7 @@ export default function MobileUsersPage() {
     if (companyId) {
       fetchSalesReps();
       fetchCanvassers();
+      fetchOfficeManagers();
       fetchUsers();
     }
   }, [companyId]);
@@ -274,7 +306,7 @@ export default function MobileUsersPage() {
   // Generic handler to create user with any role
   const createUserWithRole = async (
     role: string,
-    formData: SalesRepFormData | CanvasserFormData | BasicUserFormData,
+    formData: SalesRepFormData | CanvasserFormData | OfficeManagerFormData | BasicUserFormData,
     resetForm: () => void,
     closeDialog: () => void
   ) => {
@@ -294,6 +326,16 @@ export default function MobileUsersPage() {
         toast({
           title: 'Validation Error',
           description: 'Please select a sales rep',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Office manager specific validation
+      if (role === 'office_manager' && !(formData as OfficeManagerFormData).officeManager) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please select an office manager',
           variant: 'destructive',
         });
         return;
@@ -340,6 +382,11 @@ export default function MobileUsersPage() {
         if (canvasserValue) {
           payload.canvasser = canvasserValue;
         }
+      }
+
+      // Only include officeManager for office_manager role
+      if (role === 'office_manager') {
+        payload.officeManager = (formData as OfficeManagerFormData).officeManager;
       }
 
       const response = await fetch('/api/mobile-users/register', {
@@ -421,7 +468,7 @@ export default function MobileUsersPage() {
     createUserWithRole(
       'office_manager',
       officeManagerFormData,
-      () => setOfficeManagerFormData({ username: '', password: '', email: '', selectedSalesReps: [], selectedCanvassers: [] }),
+      () => setOfficeManagerFormData({ username: '', password: '', email: '', officeManager: '', selectedSalesReps: [], selectedCanvassers: [] }),
       () => setShowOfficeManagerDialog(false)
     );
   };
@@ -1203,6 +1250,35 @@ export default function MobileUsersPage() {
                         value={officeManagerFormData.email}
                         onChange={(e) => setOfficeManagerFormData({ ...officeManagerFormData, email: e.target.value })}
                       />
+                    </div>
+
+                    {/* Office Manager Assignment */}
+                    <div>
+                      <Label htmlFor="office-manager-select">Office Manager Assignment *</Label>
+                      <Select
+                        value={officeManagerFormData.officeManager}
+                        onValueChange={(value) => setOfficeManagerFormData({ ...officeManagerFormData, officeManager: value })}
+                        disabled={isFetchingOfficeManagers}
+                      >
+                        <SelectTrigger id="office-manager-select">
+                          <SelectValue placeholder={isFetchingOfficeManagers ? "Loading..." : "Select office manager"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {officeManagers.length === 0 && !isFetchingOfficeManagers && (
+                            <div className="px-2 py-1.5 text-sm text-gray-500">
+                              No office managers available in Twenty CRM
+                            </div>
+                          )}
+                          {officeManagers.map((om) => (
+                            <SelectItem key={om} value={om}>
+                              {om}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        This office manager will only see leads with this value in Twenty CRM
+                      </p>
                     </div>
 
                     {/* Assignment Fields */}
