@@ -530,7 +530,11 @@ export default function MobileUsersPage() {
                     <Label htmlFor="role">Role *</Label>
                     <Select
                       value={formData.role}
-                      onValueChange={(value: any) => setFormData({ ...formData, role: value })}
+                      onValueChange={(value: any) => {
+                        console.log('[Mobile Users] Role changed to:', value);
+                        console.log('[Mobile Users] Available office managers:', availableOfficeManagers);
+                        setFormData({ ...formData, role: value });
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select role" />
@@ -544,6 +548,11 @@ export default function MobileUsersPage() {
                         <SelectItem value="project_manager">Project Manager</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  {/* Debug: Show current role value */}
+                  <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                    Debug: Current role = "{formData.role}" | Available OMs = {availableOfficeManagers.length}
                   </div>
 
                   {/* Twenty CRM Enum Assignment - REQUIRED FIELDS */}
@@ -874,7 +883,11 @@ export default function MobileUsersPage() {
                 <Label htmlFor="edit-role">Role</Label>
                 <Select
                   value={formData.role}
-                  onValueChange={(value: any) => setFormData({ ...formData, role: value })}
+                  onValueChange={(value: any) => {
+                    console.log('[Mobile Users Edit] Role changed to:', value);
+                    console.log('[Mobile Users Edit] Available office managers:', availableOfficeManagers);
+                    setFormData({ ...formData, role: value });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -888,6 +901,11 @@ export default function MobileUsersPage() {
                     <SelectItem value="project_manager">Project Manager</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Debug: Show current role value */}
+              <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                Debug Edit: Current role = "{formData.role}" | Available OMs = {availableOfficeManagers.length}
               </div>
 
               {/* Twenty CRM Enum Assignment - REQUIRED FIELDS */}
