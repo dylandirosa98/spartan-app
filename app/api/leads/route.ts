@@ -85,7 +85,6 @@ export async function GET(request: NextRequest) {
               }
               city
               adress
-              zipCode
               status
               source
               medium
@@ -147,7 +146,6 @@ export async function GET(request: NextRequest) {
         address: lead.adress || null,
         city: lead.city || null,
         state: null, // Not in Twenty CRM schema
-        zipCode: lead.zipCode || null,
         status: lead.status || null,
         source: lead.source || 'twenty_crm',
         medium: lead.medium || null,
