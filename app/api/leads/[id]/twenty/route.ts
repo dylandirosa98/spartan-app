@@ -67,7 +67,6 @@ export async function GET(
           }
           city
           adress
-          zipCode
           status
           source
           medium

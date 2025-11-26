@@ -106,7 +106,6 @@ export async function PATCH(
           }
           city
           adress
-          zipCode
           status
           source
           medium
