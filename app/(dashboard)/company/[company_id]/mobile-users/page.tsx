@@ -94,6 +94,13 @@ interface OfficeManagerFormData {
   selectedCanvassers: string[];
 }
 
+interface ProjectManagerFormData {
+  username: string;
+  password: string;
+  email: string;
+  projectManager: string; // Twenty CRM project manager enum value
+}
+
 interface MobileUser {
   id: string;
   username: string;
@@ -127,10 +134,12 @@ export default function MobileUsersPage() {
   const [salesReps, setSalesReps] = useState<string[]>([]);
   const [canvassers, setCanvassers] = useState<string[]>([]);
   const [officeManagers, setOfficeManagers] = useState<string[]>([]);
+  const [projectManagers, setProjectManagers] = useState<string[]>([]);
   const [users, setUsers] = useState<MobileUser[]>([]);
   const [isFetchingSalesReps, setIsFetchingSalesReps] = useState(false);
   const [isFetchingCanvassers, setIsFetchingCanvassers] = useState(false);
   const [isFetchingOfficeManagers, setIsFetchingOfficeManagers] = useState(false);
+  const [isFetchingProjectManagers, setIsFetchingProjectManagers] = useState(false);
   const [isFetchingUsers, setIsFetchingUsers] = useState(false);
   const [activeTab, setActiveTab] = useState('sales_rep');
 
@@ -171,10 +180,11 @@ export default function MobileUsersPage() {
     selectedCanvassers: [],
   });
 
-  const [projectManagerFormData, setProjectManagerFormData] = useState<BasicUserFormData>({
+  const [projectManagerFormData, setProjectManagerFormData] = useState<ProjectManagerFormData>({
     username: '',
     password: '',
     email: '',
+    projectManager: '',
   });
 
   const [editFormData, setEditFormData] = useState<any>({
@@ -270,6 +280,33 @@ export default function MobileUsersPage() {
     }
   };
 
+  // Fetch project managers from Twenty CRM
+  const fetchProjectManagers = async () => {
+    if (!companyId) return;
+
+    try {
+      setIsFetchingProjectManagers(true);
+      const response = await fetch(`/api/project-managers?companyId=${companyId}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch project managers');
+      }
+
+      const data = await response.json();
+      setProjectManagers(data.projectManagers || []);
+      console.log('[Mobile Users] Fetched project managers:', data.projectManagers);
+    } catch (error) {
+      console.error('[Mobile Users] Error fetching project managers:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load project manager options from Twenty CRM',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsFetchingProjectManagers(false);
+    }
+  };
+
   // Fetch mobile users
   const fetchUsers = async () => {
     try {
@@ -300,6 +337,7 @@ export default function MobileUsersPage() {
       fetchSalesReps();
       fetchCanvassers();
       fetchOfficeManagers();
+      fetchProjectManagers();
       fetchUsers();
     }
   }, [companyId]);
@@ -337,6 +375,16 @@ export default function MobileUsersPage() {
         toast({
           title: 'Validation Error',
           description: 'Please select an office manager',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Project manager specific validation
+      if (role === 'project_manager' && !(formData as ProjectManagerFormData).projectManager) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please select a project manager',
           variant: 'destructive',
         });
         return;
@@ -388,6 +436,11 @@ export default function MobileUsersPage() {
       // Only include officeManager for office_manager role
       if (role === 'office_manager') {
         payload.officeManager = (formData as OfficeManagerFormData).officeManager;
+      }
+
+      // Only include projectManager for project_manager role
+      if (role === 'project_manager') {
+        payload.projectManager = (formData as ProjectManagerFormData).projectManager;
       }
 
       const response = await fetch('/api/mobile-users/register', {
@@ -478,7 +531,7 @@ export default function MobileUsersPage() {
     createUserWithRole(
       'project_manager',
       projectManagerFormData,
-      () => setProjectManagerFormData({ username: '', password: '', email: '' }),
+      () => setProjectManagerFormData({ username: '', password: '', email: '', projectManager: '' }),
       () => setShowProjectManagerDialog(false)
     );
   };
@@ -1489,10 +1542,38 @@ export default function MobileUsersPage() {
                   <DialogHeader>
                     <DialogTitle>Create Project Manager User</DialogTitle>
                     <DialogDescription>
-                      Create a mobile account for a project manager.
+                      Create a mobile account for a project manager from Twenty CRM.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="projectManager">Project Manager (from Twenty CRM) *</Label>
+                      <Select
+                        value={projectManagerFormData.projectManager}
+                        onValueChange={(value) => setProjectManagerFormData({ ...projectManagerFormData, projectManager: value })}
+                        disabled={isFetchingProjectManagers}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={isFetchingProjectManagers ? "Loading..." : "Select project manager"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projectManagers.length === 0 ? (
+                            <SelectItem value="no-pms" disabled>
+                              {isFetchingProjectManagers ? 'Loading...' : 'No project managers found in Twenty CRM'}
+                            </SelectItem>
+                          ) : (
+                            projectManagers.map((pm) => (
+                              <SelectItem key={pm} value={pm}>
+                                <div className="flex items-center gap-2">
+                                  <UserCheck className="h-4 w-4" />
+                                  {pm}
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div>
                       <Label htmlFor="project-username">Username *</Label>
                       <Input
@@ -1540,7 +1621,7 @@ export default function MobileUsersPage() {
                     </Button>
                     <Button
                       onClick={handleCreateProjectManager}
-                      disabled={isSaving}
+                      disabled={isSaving || isFetchingProjectManagers || projectManagers.length === 0}
                       className="bg-[#C41E3A] hover:bg-[#A01828]"
                     >
                       {isSaving ? (
