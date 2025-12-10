@@ -92,6 +92,7 @@ interface OfficeManagerFormData {
   officeManager: string; // Twenty CRM office manager enum value
   selectedSalesReps: string[];
   selectedCanvassers: string[];
+  selectedProjectManagers: string[];
 }
 
 interface ProjectManagerFormData {
@@ -178,6 +179,7 @@ export default function MobileUsersPage() {
     officeManager: '',
     selectedSalesReps: [],
     selectedCanvassers: [],
+    selectedProjectManagers: [],
   });
 
   const [projectManagerFormData, setProjectManagerFormData] = useState<ProjectManagerFormData>({
@@ -457,7 +459,8 @@ export default function MobileUsersPage() {
           const officeManagerData = formData as OfficeManagerFormData;
           const assignedUsers = [
             ...(officeManagerData.selectedSalesReps || []),
-            ...(officeManagerData.selectedCanvassers || [])
+            ...(officeManagerData.selectedCanvassers || []),
+            ...(officeManagerData.selectedProjectManagers || [])
           ];
 
           // Update each assigned user's officeManager field
@@ -522,7 +525,7 @@ export default function MobileUsersPage() {
     createUserWithRole(
       'office_manager',
       officeManagerFormData,
-      () => setOfficeManagerFormData({ username: '', password: '', email: '', officeManager: '', selectedSalesReps: [], selectedCanvassers: [] }),
+      () => setOfficeManagerFormData({ username: '', password: '', email: '', officeManager: '', selectedSalesReps: [], selectedCanvassers: [], selectedProjectManagers: [] }),
       () => setShowOfficeManagerDialog(false)
     );
   };
@@ -547,6 +550,9 @@ export default function MobileUsersPage() {
     const assignedCanvassers = user.role === 'office_manager'
       ? users.filter(u => u.role === 'canvasser' && u.office_manager === user.username).map(u => u.id)
       : [];
+    const assignedProjectManagers = user.role === 'office_manager'
+      ? users.filter(u => u.role === 'project_manager' && u.office_manager === user.username).map(u => u.id)
+      : [];
 
     setEditFormData({
       username: user.username,
@@ -558,6 +564,7 @@ export default function MobileUsersPage() {
       role: user.role,
       selectedSalesReps: assignedSalesReps,
       selectedCanvassers: assignedCanvassers,
+      selectedProjectManagers: assignedProjectManagers,
     });
     setShowEditDialog(true);
   };
@@ -637,7 +644,8 @@ export default function MobileUsersPage() {
           const currentlyAssigned = users.filter(u => u.office_manager === selectedUser.username).map(u => u.id);
           const newlySelected = [
             ...(editFormData.selectedSalesReps || []),
-            ...(editFormData.selectedCanvassers || [])
+            ...(editFormData.selectedCanvassers || []),
+            ...(editFormData.selectedProjectManagers || [])
           ];
 
           // Clear users who are no longer assigned
@@ -1396,6 +1404,34 @@ export default function MobileUsersPage() {
                         )}
                       </div>
                     </div>
+
+                    <div>
+                      <Label>Assign Project Managers</Label>
+                      <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
+                        {getUsersByRole('project_manager').map(user => (
+                          <label key={user.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={officeManagerFormData.selectedProjectManagers?.includes(user.id)}
+                              onChange={(e) => {
+                                const selected = officeManagerFormData.selectedProjectManagers || [];
+                                setOfficeManagerFormData({
+                                  ...officeManagerFormData,
+                                  selectedProjectManagers: e.target.checked
+                                    ? [...selected, user.id]
+                                    : selected.filter(id => id !== user.id)
+                                });
+                              }}
+                              className="rounded"
+                            />
+                            <span className="text-sm">{user.username} ({user.email})</span>
+                          </label>
+                        ))}
+                        {getUsersByRole('project_manager').length === 0 && (
+                          <p className="text-sm text-gray-500">No project managers available</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setShowOfficeManagerDialog(false)} disabled={isSaving}>
@@ -1975,6 +2011,35 @@ export default function MobileUsersPage() {
                       ))}
                       {getUsersByRole('canvasser').length === 0 && (
                         <p className="text-sm text-gray-500">No canvassers available</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Assign Project Managers</Label>
+                    <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
+                      {getUsersByRole('project_manager').map(user => (
+                        <label key={user.id} className="flex items-center gap-2 p-1 hover:bg-gray-50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editFormData.selectedProjectManagers?.includes(user.id) || false}
+                            onChange={(e) => {
+                              // Handle assignment change
+                              const newAssignments = e.target.checked
+                                ? [...(editFormData.selectedProjectManagers || []), user.id]
+                                : (editFormData.selectedProjectManagers || []).filter((id: string) => id !== user.id);
+                              setEditFormData({
+                                ...editFormData,
+                                selectedProjectManagers: newAssignments
+                              });
+                            }}
+                            className="rounded"
+                          />
+                          <span className="text-sm">{user.username} ({user.email})</span>
+                        </label>
+                      ))}
+                      {getUsersByRole('project_manager').length === 0 && (
+                        <p className="text-sm text-gray-500">No project managers available</p>
                       )}
                     </div>
                   </div>
