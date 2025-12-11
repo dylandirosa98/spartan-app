@@ -9,19 +9,27 @@ const supabase = createClient(
 );
 
 /**
- * GET /api/tasks/all?companyId=xxx&salesRep=xxx
- * Fetch all tasks for a company (for calendar view)
- * If salesRep is provided, only returns tasks for leads assigned to that sales rep
+ * GET /api/tasks/pm?companyId=xxx&projectManager=xxx
+ * Fetch tasks for a project manager
+ * Only returns tasks for leads assigned to the specified project manager
+ * Filters to only show tasks where install='YES' OR pmTask='YES'
  */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const companyId = searchParams.get('companyId');
-    const salesRep = searchParams.get('salesRep');
+    const projectManager = searchParams.get('projectManager');
 
     if (!companyId) {
       return NextResponse.json(
         { error: 'companyId is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!projectManager) {
+      return NextResponse.json(
+        { error: 'projectManager is required' },
         { status: 400 }
       );
     }
@@ -49,10 +57,17 @@ export async function GET(request: NextRequest) {
       decryptedApiKey
     );
 
-    // Query all taskTargets with their associated tasks and leads
+    // Query all taskTargets with tasks, leads, and filter by projectManager
     const query = `
-      query GetAllTasks {
-        taskTargets(orderBy: { createdAt: DescNullsLast }) {
+      query GetPMTasks($projectManager: String!) {
+        taskTargets(
+          filter: {
+            lead: {
+              projectManager: { eq: $projectManager }
+            }
+          }
+          orderBy: { createdAt: DescNullsLast }
+        ) {
           edges {
             node {
               id
@@ -64,7 +79,6 @@ export async function GET(request: NextRequest) {
                 }
                 status
                 dueAt
-                canvassLead
                 install
                 pmTask
                 createdAt
@@ -80,7 +94,9 @@ export async function GET(request: NextRequest) {
               lead {
                 id
                 name
-                salesRep
+                projectManager
+                adress
+                city
               }
             }
           }
@@ -88,11 +104,11 @@ export async function GET(request: NextRequest) {
       }
     `;
 
-    const data = await (twentyClient as any).request(query);
+    console.log('[PM Tasks API] Fetching tasks for project manager:', projectManager);
 
-    console.log('[Tasks All API] Fetched all tasks');
+    const data = await (twentyClient as any).request(query, { projectManager });
 
-    // Transform the data to include lead information
+    // Transform the data and filter for install or pmTask
     // Filter out taskTargets without tasks (orphaned records)
     let tasks = data.taskTargets?.edges
       ?.filter((edge: any) => edge.node.task != null)
@@ -101,37 +117,26 @@ export async function GET(request: NextRequest) {
         body: edge.node.task.bodyV2?.markdown || null,
         leadId: edge.node.lead?.id || null,
         leadName: edge.node.lead?.name || null,
-        leadSalesRep: edge.node.lead?.salesRep || null,
+        leadProjectManager: edge.node.lead?.projectManager || null,
+        leadAddress: edge.node.lead?.adress || null,
+        leadCity: edge.node.lead?.city || null,
       })) || [];
 
-    // Filter by sales rep if provided
-    if (salesRep) {
-      tasks = tasks.filter((task: any) => task.leadSalesRep === salesRep);
-      console.log(`[Tasks All API] Filtered to ${tasks.length} tasks for sales rep: ${salesRep}`);
+    // Filter to only show tasks where install='YES' OR pmTask='YES'
+    tasks = tasks.filter((task: any) =>
+      task.install === 'YES' || task.pmTask === 'YES'
+    );
 
-      // For sales reps: Filter out PM-only tasks (pmTask='YES' but install!='YES')
-      // Sales reps should see:
-      // - Regular tasks (neither install nor pmTask)
-      // - Install tasks (install='YES')
-      // But NOT PM-only tasks (pmTask='YES' and install!='YES')
-      tasks = tasks.filter((task: any) => {
-        // If pmTask is 'YES' but install is not 'YES', this is a PM-only task - exclude it
-        if (task.pmTask === 'YES' && task.install !== 'YES') {
-          return false;
-        }
-        return true;
-      });
-      console.log(`[Tasks All API] After filtering PM-only tasks: ${tasks.length} tasks`);
-    }
+    console.log(`[PM Tasks API] Found ${tasks.length} PM tasks for project manager: ${projectManager}`);
 
     return NextResponse.json({
       tasks: tasks,
     });
   } catch (error) {
-    console.error('[Tasks All API] Error:', error);
+    console.error('[PM Tasks API] Error:', error);
     return NextResponse.json(
       {
-        error: 'Failed to fetch tasks from Twenty CRM',
+        error: 'Failed to fetch PM tasks from Twenty CRM',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
