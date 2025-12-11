@@ -115,18 +115,36 @@ export async function GET(request: NextRequest) {
         leadCity: edge.node.lead?.city || null,
       })) || [];
 
+    console.log(`[PM Tasks API] Total tasks fetched: ${tasks.length}`);
+    console.log(`[PM Tasks API] Unique lead project managers:`, [...new Set(tasks.map((t: any) => t.leadProjectManager))]);
+
     // Filter by project manager (case-insensitive)
     tasks = tasks.filter((task: any) => {
-      if (!task.leadProjectManager) return false;
-      return task.leadProjectManager.toLowerCase() === projectManager.toLowerCase();
+      if (!task.leadProjectManager) {
+        console.log(`[PM Tasks API] Task ${task.id} has no leadProjectManager, skipping`);
+        return false;
+      }
+      const matches = task.leadProjectManager.toLowerCase() === projectManager.toLowerCase();
+      if (!matches) {
+        console.log(`[PM Tasks API] Task ${task.id} leadProjectManager "${task.leadProjectManager}" doesn't match "${projectManager}"`);
+      }
+      return matches;
     });
 
     console.log(`[PM Tasks API] Found ${tasks.length} tasks for project manager: ${projectManager} before install/pmTask filter`);
 
     // Filter to only show tasks where install='YES' OR pmTask='YES'
-    tasks = tasks.filter((task: any) =>
-      task.install === 'YES' || task.pmTask === 'YES'
-    );
+    tasks = tasks.filter((task: any) => {
+      const hasInstall = task.install === 'YES';
+      const hasPmTask = task.pmTask === 'YES';
+      const shouldShow = hasInstall || hasPmTask;
+
+      if (!shouldShow) {
+        console.log(`[PM Tasks API] Task ${task.id} filtered out - install: ${task.install}, pmTask: ${task.pmTask}`);
+      }
+
+      return shouldShow;
+    });
 
     console.log(`[PM Tasks API] Found ${tasks.length} PM tasks after install/pmTask filter`);
 
