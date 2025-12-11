@@ -57,17 +57,10 @@ export async function GET(request: NextRequest) {
       decryptedApiKey
     );
 
-    // Query all taskTargets with tasks, leads, and filter by projectManager
+    // Query all taskTargets - we'll filter by projectManager in JavaScript
     const query = `
-      query GetPMTasks($projectManager: String!) {
-        taskTargets(
-          filter: {
-            lead: {
-              projectManager: { eq: $projectManager }
-            }
-          }
-          orderBy: { createdAt: DescNullsLast }
-        ) {
+      query GetPMTasks {
+        taskTargets(orderBy: { createdAt: DescNullsLast }) {
           edges {
             node {
               id
@@ -106,7 +99,7 @@ export async function GET(request: NextRequest) {
 
     console.log('[PM Tasks API] Fetching tasks for project manager:', projectManager);
 
-    const data = await (twentyClient as any).request(query, { projectManager });
+    const data = await (twentyClient as any).request(query);
 
     // Transform the data and filter for install or pmTask
     // Filter out taskTargets without tasks (orphaned records)
@@ -122,12 +115,20 @@ export async function GET(request: NextRequest) {
         leadCity: edge.node.lead?.city || null,
       })) || [];
 
+    // Filter by project manager (case-insensitive)
+    tasks = tasks.filter((task: any) => {
+      if (!task.leadProjectManager) return false;
+      return task.leadProjectManager.toLowerCase() === projectManager.toLowerCase();
+    });
+
+    console.log(`[PM Tasks API] Found ${tasks.length} tasks for project manager: ${projectManager} before install/pmTask filter`);
+
     // Filter to only show tasks where install='YES' OR pmTask='YES'
     tasks = tasks.filter((task: any) =>
       task.install === 'YES' || task.pmTask === 'YES'
     );
 
-    console.log(`[PM Tasks API] Found ${tasks.length} PM tasks for project manager: ${projectManager}`);
+    console.log(`[PM Tasks API] Found ${tasks.length} PM tasks after install/pmTask filter`);
 
     return NextResponse.json({
       tasks: tasks,
