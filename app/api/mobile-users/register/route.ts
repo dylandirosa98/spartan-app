@@ -17,6 +17,8 @@ const registerSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   salesRep: z.string().optional(),
   canvasser: z.string().optional(),
+  officeManager: z.string().optional(),
+  projectManager: z.string().optional(),
   companyId: z.string().uuid('Invalid company ID'),
   role: z.enum(['sales_rep', 'canvasser', 'office_manager', 'project_manager'], {
     errorMap: () => ({ message: 'Role must be sales_rep, canvasser, office_manager, or project_manager' })
@@ -55,7 +57,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { username, email, password, salesRep, canvasser, companyId, role } = validation.data;
+    const { username, email, password, salesRep, canvasser, officeManager, projectManager, companyId, role } = validation.data;
 
     // Check if company exists
     const { data: company, error: companyError } = await supabase
@@ -202,9 +204,12 @@ export async function POST(request: NextRequest) {
 
     // Only sales_rep role needs a Twenty CRM sales rep
     // Only canvasser role needs a Twenty CRM canvasser
-    // Other roles (office_manager, project_manager) don't need these fields
+    // Only office_manager role needs an office manager value
+    // Only project_manager role needs a Twenty CRM project manager
     const salesRepValue = role === 'sales_rep' ? salesRep : null;
     const canvasserValue = role === 'canvasser' ? (canvasser || null) : null;
+    const officeManagerValue = role === 'office_manager' ? (officeManager || null) : null;
+    const projectManagerValue = role === 'project_manager' ? projectManager : null;
 
     // Create mobile user
     const { data: newUser, error: insertError } = await supabase
@@ -215,11 +220,13 @@ export async function POST(request: NextRequest) {
         password_hash: passwordHash,
         sales_rep: salesRepValue,
         canvasser: canvasserValue,
+        office_manager: officeManagerValue,
+        project_manager: projectManagerValue,
         company_id: companyId,
         role: role,
         is_active: true,
       })
-      .select('id, username, email, sales_rep, canvasser, company_id, role, created_at')
+      .select('id, username, email, sales_rep, canvasser, office_manager, project_manager, company_id, role, created_at')
       .single();
 
     if (insertError) {
@@ -237,6 +244,8 @@ export async function POST(request: NextRequest) {
         email: newUser.email,
         salesRep: newUser.sales_rep,
         canvasser: newUser.canvasser,
+        officeManager: newUser.office_manager,
+        projectManager: newUser.project_manager,
         companyId: newUser.company_id,
         role: newUser.role,
         createdAt: newUser.created_at,
