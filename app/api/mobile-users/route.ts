@@ -9,7 +9,7 @@ export async function GET(_request: NextRequest) {
     // Fetch all users from Supabase
     const { data: users, error } = await supabase
       .from('mobile_users')
-      .select('id, username, email, role, sales_rep, canvasser, office_manager, project_manager, company_id, is_active, created_at, updated_at')
+      .select('id, username, email, role, sales_rep, canvasser, office_manager, company_id, is_active, created_at, updated_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -154,7 +154,7 @@ export async function PUT(request: NextRequest) {
       .from('mobile_users')
       .update(updateData)
       .eq('id', id)
-      .select('id, username, email, role, sales_rep, canvasser, office_manager, project_manager, company_id, is_active, created_at, updated_at')
+      .select('id, username, email, role, sales_rep, canvasser, office_manager, company_id, is_active, created_at, updated_at')
       .single();
 
     if (error) {
