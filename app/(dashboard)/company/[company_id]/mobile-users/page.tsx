@@ -197,6 +197,7 @@ export default function MobileUsersPage() {
     salesRep: '',
     canvasser: '',
     officeManager: '',
+    projectManager: '',
     role: 'sales_rep',
     selectedSalesReps: [],
     selectedCanvassers: [],
@@ -562,6 +563,7 @@ export default function MobileUsersPage() {
       salesRep: user.sales_rep || '',
       canvasser: user.canvasser || '',
       officeManager: user.office_manager || '',
+      projectManager: user.project_manager || '',
       role: user.role,
       selectedSalesReps: assignedSalesReps,
       selectedCanvassers: assignedCanvassers,
@@ -629,6 +631,10 @@ export default function MobileUsersPage() {
 
       if (editFormData.role === 'office_manager') {
         updatePayload.officeManager = editFormData.officeManager;
+      }
+
+      if (editFormData.role === 'project_manager') {
+        updatePayload.projectManager = editFormData.projectManager;
       }
 
       const response = await fetch('/api/mobile-users', {
@@ -1922,6 +1928,37 @@ export default function MobileUsersPage() {
                   </Select>
                   <p className="text-xs text-gray-500 mt-1">
                     You can change the assigned canvasser or leave unassigned
+                  </p>
+                </div>
+              )}
+
+              {/* Project Manager Assignment Field */}
+              {editFormData.role === 'project_manager' && (
+                <div>
+                  <Label htmlFor="edit-project-manager">Project Manager *</Label>
+                  <Select
+                    value={editFormData.projectManager}
+                    onValueChange={(value) => setEditFormData({ ...editFormData, projectManager: value })}
+                    disabled={isFetchingProjectManagers}
+                  >
+                    <SelectTrigger id="edit-project-manager">
+                      <SelectValue placeholder={isFetchingProjectManagers ? 'Loading...' : 'Select project manager'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projectManagers.length === 0 && !isFetchingProjectManagers && (
+                        <div className="px-2 py-1.5 text-sm text-gray-500">
+                          No project managers available in Twenty CRM
+                        </div>
+                      )}
+                      {projectManagers.map((pm) => (
+                        <SelectItem key={pm} value={pm}>
+                          {pm}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    This project manager will only see leads/tasks with this value in Twenty CRM
                   </p>
                 </div>
               )}
