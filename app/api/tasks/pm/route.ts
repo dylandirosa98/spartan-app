@@ -57,10 +57,49 @@ export async function GET(request: NextRequest) {
       decryptedApiKey
     );
 
-    // Query all taskTargets - we'll filter by projectManager in JavaScript
-    const query = `
-      query GetPMTasks {
-        taskTargets(orderBy: { createdAt: DescNullsLast }) {
+    // Step 1: Query leads where projectManager matches
+    const leadsQuery = `
+      query GetLeadsForPM($projectManager: String!) {
+        people(filter: { projectManager: { eq: $projectManager } }) {
+          edges {
+            node {
+              id
+              name {
+                firstName
+                lastName
+              }
+              adress
+              city
+              projectManager
+            }
+          }
+        }
+      }
+    `;
+
+    console.log('[PM Tasks API] Fetching leads for project manager:', projectManager);
+
+    const leadsData = await (twentyClient as any).request(leadsQuery, { projectManager });
+
+    const leads = leadsData.people?.edges?.map((edge: any) => ({
+      id: edge.node.id,
+      name: `${edge.node.name?.firstName || ''} ${edge.node.name?.lastName || ''}`.trim(),
+      address: edge.node.adress || null,
+      city: edge.node.city || null,
+      projectManager: edge.node.projectManager,
+    })) || [];
+
+    console.log(`[PM Tasks API] Found ${leads.length} leads for project manager: ${projectManager}`);
+
+    if (leads.length === 0) {
+      console.log('[PM Tasks API] No leads found for this project manager');
+      return NextResponse.json({ tasks: [] });
+    }
+
+    // Step 2: For each lead, fetch its tasks via taskTargets
+    const tasksQuery = `
+      query GetTasksForLead($leadId: UUID!) {
+        taskTargets(filter: { leadId: { eq: $leadId } }, orderBy: { createdAt: DescNullsLast }) {
           edges {
             node {
               id
@@ -76,20 +115,6 @@ export async function GET(request: NextRequest) {
                 pmTask
                 createdAt
                 updatedAt
-                assignee {
-                  id
-                  name {
-                    firstName
-                    lastName
-                  }
-                }
-              }
-              lead {
-                id
-                name
-                projectManager
-                adress
-                city
               }
             }
           }
@@ -97,41 +122,30 @@ export async function GET(request: NextRequest) {
       }
     `;
 
-    console.log('[PM Tasks API] Fetching tasks for project manager:', projectManager);
+    console.log('[PM Tasks API] Fetching tasks for each lead...');
 
-    const data = await (twentyClient as any).request(query);
+    // Fetch tasks for all leads in parallel
+    const taskPromises = leads.map(async (lead: any) => {
+      const tasksData = await (twentyClient as any).request(tasksQuery, { leadId: lead.id });
 
-    // Transform the data and filter for install or pmTask
-    // Filter out taskTargets without tasks (orphaned records)
-    let tasks = data.taskTargets?.edges
-      ?.filter((edge: any) => edge.node.task != null)
-      ?.map((edge: any) => ({
-        ...edge.node.task,
-        body: edge.node.task.bodyV2?.markdown || null,
-        leadId: edge.node.lead?.id || null,
-        leadName: edge.node.lead?.name || null,
-        leadProjectManager: edge.node.lead?.projectManager || null,
-        leadAddress: edge.node.lead?.adress || null,
-        leadCity: edge.node.lead?.city || null,
-      })) || [];
-
-    console.log(`[PM Tasks API] Total tasks fetched: ${tasks.length}`);
-    console.log(`[PM Tasks API] Unique lead project managers:`, [...new Set(tasks.map((t: any) => t.leadProjectManager))]);
-
-    // Filter by project manager (case-insensitive)
-    tasks = tasks.filter((task: any) => {
-      if (!task.leadProjectManager) {
-        console.log(`[PM Tasks API] Task ${task.id} has no leadProjectManager, skipping`);
-        return false;
-      }
-      const matches = task.leadProjectManager.toLowerCase() === projectManager.toLowerCase();
-      if (!matches) {
-        console.log(`[PM Tasks API] Task ${task.id} leadProjectManager "${task.leadProjectManager}" doesn't match "${projectManager}"`);
-      }
-      return matches;
+      // Transform tasks and attach lead info
+      return (tasksData.taskTargets?.edges || [])
+        .filter((edge: any) => edge.node.task != null)
+        .map((edge: any) => ({
+          ...edge.node.task,
+          body: edge.node.task.bodyV2?.markdown || null,
+          leadId: lead.id,
+          leadName: lead.name,
+          leadProjectManager: lead.projectManager,
+          leadAddress: lead.address,
+          leadCity: lead.city,
+        }));
     });
 
-    console.log(`[PM Tasks API] Found ${tasks.length} tasks for project manager: ${projectManager} before install/pmTask filter`);
+    const allTasksArrays = await Promise.all(taskPromises);
+    let tasks = allTasksArrays.flat();
+
+    console.log(`[PM Tasks API] Total tasks fetched: ${tasks.length}`);
 
     // Filter to only show tasks where install='YES' OR pmTask='YES'
     tasks = tasks.filter((task: any) => {
