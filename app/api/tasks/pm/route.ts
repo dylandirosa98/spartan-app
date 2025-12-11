@@ -57,19 +57,19 @@ export async function GET(request: NextRequest) {
       decryptedApiKey
     );
 
-    // Step 1: Query leads where projectManager matches
+    // Step 1: Query ALL leads (no filter support for projectManager in GraphQL)
     const leadsQuery = `
-      query GetLeadsForPM($projectManager: String!) {
-        people(filter: { projectManager: { eq: $projectManager } }) {
+      query GetAllLeads {
+        leads {
           edges {
             node {
               id
-              name {
-                firstName
-                lastName
-              }
-              adress
+              name
               city
+              adress
+              salesRep
+              canvasser
+              officeManager
               projectManager
             }
           }
@@ -77,19 +77,17 @@ export async function GET(request: NextRequest) {
       }
     `;
 
-    console.log('[PM Tasks API] Fetching leads for project manager:', projectManager);
+    console.log('[PM Tasks API] Fetching all leads...');
 
-    const leadsData = await (twentyClient as any).request(leadsQuery, { projectManager });
+    const leadsData = await (twentyClient as any).request(leadsQuery);
 
-    const leads = leadsData.people?.edges?.map((edge: any) => ({
-      id: edge.node.id,
-      name: `${edge.node.name?.firstName || ''} ${edge.node.name?.lastName || ''}`.trim(),
-      address: edge.node.adress || null,
-      city: edge.node.city || null,
-      projectManager: edge.node.projectManager,
-    })) || [];
+    // Filter leads by projectManager in JavaScript (case-insensitive)
+    const allLeads = leadsData.leads?.edges?.map((edge: any) => edge.node) || [];
+    const leads = allLeads.filter((lead: any) =>
+      lead.projectManager?.toLowerCase() === projectManager.toLowerCase()
+    );
 
-    console.log(`[PM Tasks API] Found ${leads.length} leads for project manager: ${projectManager}`);
+    console.log(`[PM Tasks API] Total leads: ${allLeads.length}, Matching PM "${projectManager}": ${leads.length}`);
 
     if (leads.length === 0) {
       console.log('[PM Tasks API] No leads found for this project manager');
@@ -135,10 +133,10 @@ export async function GET(request: NextRequest) {
           ...edge.node.task,
           body: edge.node.task.bodyV2?.markdown || null,
           leadId: lead.id,
-          leadName: lead.name,
+          leadName: lead.name || 'Unknown',
           leadProjectManager: lead.projectManager,
-          leadAddress: lead.address,
-          leadCity: lead.city,
+          leadAddress: lead.adress || null,  // Note: "adress" is a typo in Twenty CRM
+          leadCity: lead.city || null,
         }));
     });
 
@@ -147,10 +145,10 @@ export async function GET(request: NextRequest) {
 
     console.log(`[PM Tasks API] Total tasks fetched: ${tasks.length}`);
 
-    // Filter to only show tasks where install='YES' OR pmTask='YES'
+    // Filter to only show tasks where install=true OR pmTask=true
     tasks = tasks.filter((task: any) => {
-      const hasInstall = task.install === 'YES';
-      const hasPmTask = task.pmTask === 'YES';
+      const hasInstall = task.install === true || task.install === 'YES';
+      const hasPmTask = task.pmTask === true || task.pmTask === 'YES';
       const shouldShow = hasInstall || hasPmTask;
 
       if (!shouldShow) {
