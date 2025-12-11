@@ -110,6 +110,7 @@ interface MobileUser {
   sales_rep: string | null;
   canvasser: string | null;
   office_manager: string | null;
+  project_manager: string | null;
   company_id: string;
   is_active: boolean;
   created_at: string;

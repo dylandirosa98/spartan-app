@@ -25,6 +25,7 @@ export interface MobileUser {
   sales_rep: string | null;
   canvasser: string | null;
   office_manager: string | null;
+  project_manager: string | null;
   company_id: string;
   is_active: boolean;
   created_at: string;
@@ -39,6 +40,7 @@ export interface MobileUserInsert {
   sales_rep?: string | null;
   canvasser?: string | null;
   office_manager?: string | null;
+  project_manager?: string | null;
   company_id?: string;
   workspace_id?: string;
   twenty_api_key?: string | null;
@@ -53,5 +55,6 @@ export interface MobileUserUpdate {
   sales_rep?: string | null;
   canvasser?: string | null;
   office_manager?: string | null;
+  project_manager?: string | null;
   is_active?: boolean;
 }
