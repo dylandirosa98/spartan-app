@@ -16,6 +16,7 @@ const supabaseClient = createClient(
  * Query params:
  *   - company_id (required)
  *   - salesRep (optional) - filter leads by sales rep
+ *   - projectManager (optional) - filter leads by project manager
  *   - since (optional) - ISO timestamp to fetch only leads updated after this time (delta sync)
  */
 export async function GET(request: NextRequest) {
@@ -23,6 +24,7 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const companyId = url.searchParams.get('company_id');
     const salesRepFilter = url.searchParams.get('salesRep');
+    const projectManagerFilter = url.searchParams.get('projectManager');
     const since = url.searchParams.get('since');
 
     if (!companyId) {
@@ -91,6 +93,7 @@ export async function GET(request: NextRequest) {
               salesRep
               canvasser
               officeManager
+              projectManager
               demo
               estValue {
                 amountMicros
@@ -152,6 +155,7 @@ export async function GET(request: NextRequest) {
         salesRep: lead.salesRep || null,
         canvasser: lead.canvasser || null,
         officeManager: lead.officeManager || null,
+        projectManager: lead.projectManager || null,
         demo: lead.demo || null,
         notes: lead.notes || null,
         assignedTo: lead.salesRep || null,
@@ -177,16 +181,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Filter by salesRep if specified (do this in JavaScript instead of GraphQL)
-    const transformedLeads = salesRepFilter
-      ? allLeads.filter((lead: any) => lead.assignedTo === salesRepFilter)
-      : allLeads;
+    // Filter by salesRep or projectManager if specified (do this in JavaScript instead of GraphQL)
+    let transformedLeads = allLeads;
+
+    if (salesRepFilter) {
+      transformedLeads = transformedLeads.filter((lead: any) => lead.assignedTo === salesRepFilter);
+    }
+
+    if (projectManagerFilter) {
+      transformedLeads = transformedLeads.filter((lead: any) => lead.projectManager === projectManagerFilter);
+    }
 
     console.log(
       '[Leads API] After filtering:',
       transformedLeads.length,
       'leads',
-      salesRepFilter ? `(salesRep: ${salesRepFilter})` : '(no filter)'
+      salesRepFilter ? `(salesRep: ${salesRepFilter})` : projectManagerFilter ? `(projectManager: ${projectManagerFilter})` : '(no filter)'
     );
 
     return NextResponse.json({ leads: transformedLeads });
