@@ -124,6 +124,8 @@ export async function GET(request: NextRequest) {
                   }
                   status
                   dueAt
+                  install
+                  pmTask
                   createdAt
                   updatedAt
                   assignee {
